@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
+  DocumentPanelRequest,
   DocumentPreviewFile,
+  DocumentPreviewMode,
   DocumentsPreviewResult
 } from "../../../shared/documentTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
@@ -10,10 +12,19 @@ import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { Dialog } from "./ui/Dialog";
 import { cn } from "../lib/cn";
 
-export function DocumentsPanel({ project }: { project: ProjectSummary | null }): React.JSX.Element {
+export function DocumentsPanel({
+  project,
+  request,
+  onRequestHandled
+}: {
+  project: ProjectSummary | null;
+  request?: DocumentPanelRequest | null;
+  onRequestHandled?: () => void;
+}): React.JSX.Element {
   const [preview, setPreview] = useState<DocumentsPreviewResult | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [lastPreviewMode, setLastPreviewMode] = useState<DocumentPreviewMode | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +33,9 @@ export function DocumentsPanel({ project }: { project: ProjectSummary | null }):
   const selectedFile =
     preview?.files.find((file) => file.name === selectedFileName) ?? preview?.files[0] ?? null;
   const filesToWrite = preview?.files.filter((file) => selectedFiles.has(file.name)) ?? [];
+  const overwriteCount = filesToWrite.filter((file) => file.exists).length;
 
-  const loadDefaultPreview = async (): Promise<void> => {
+  const loadDefaultPreview = useCallback(async (): Promise<void> => {
     if (!project) {
       return;
     }
@@ -35,6 +47,7 @@ export function DocumentsPanel({ project }: { project: ProjectSummary | null }):
     try {
       const result = await window.agentdesk.documents.previewDefaults(project.id);
       setPreview(result);
+      setLastPreviewMode("defaults");
       setSelectedFileName(result.files[0]?.name ?? null);
       setSelectedFiles(new Set(result.files.map((file: DocumentPreviewFile) => file.name)));
       setMessage("Default documentation preview generated.");
@@ -43,9 +56,9 @@ export function DocumentsPanel({ project }: { project: ProjectSummary | null }):
     } finally {
       setIsBusy(false);
     }
-  };
+  }, [project]);
 
-  const loadProgressPreview = async (): Promise<void> => {
+  const loadProgressPreview = useCallback(async (): Promise<void> => {
     if (!project) {
       return;
     }
@@ -60,15 +73,32 @@ export function DocumentsPanel({ project }: { project: ProjectSummary | null }):
         projectId: result.projectId,
         files: [result.file]
       });
+      setLastPreviewMode("progress");
       setSelectedFileName(result.file.name);
       setSelectedFiles(new Set([result.file.name]));
-      setMessage("Progress sync preview generated.");
+      setMessage("Progress sync preview generated from current task, run, and quality status.");
     } catch (previewError) {
       setError(previewError instanceof Error ? previewError.message : "Failed to generate progress preview.");
     } finally {
       setIsBusy(false);
     }
-  };
+  }, [project]);
+
+  useEffect(() => {
+    if (!project || !request) {
+      return;
+    }
+
+    void (async () => {
+      if (request.mode === "progress") {
+        await loadProgressPreview();
+      } else {
+        await loadDefaultPreview();
+      }
+
+      onRequestHandled?.();
+    })();
+  }, [loadDefaultPreview, loadProgressPreview, onRequestHandled, project, request]);
 
   const toggleFile = (file: DocumentPreviewFile): void => {
     setSelectedFiles((current) => {
@@ -100,7 +130,12 @@ export function DocumentsPanel({ project }: { project: ProjectSummary | null }):
         files: filesToWrite
       });
       setMessage(`Wrote ${result.writtenFiles.length} markdown file(s).`);
-      await loadProgressPreview();
+
+      if (lastPreviewMode === "progress") {
+        await loadProgressPreview();
+      } else {
+        await loadDefaultPreview();
+      }
     } catch (writeError) {
       setError(writeError instanceof Error ? writeError.message : "Failed to write markdown files.");
     } finally {
@@ -150,7 +185,7 @@ export function DocumentsPanel({ project }: { project: ProjectSummary | null }):
         <Card>
           <CardTitle>Sync Progress</CardTitle>
           <CardDescription>
-            Preview PROGRESS.md from current task statuses, recent runs, and recent quality results.
+            Preview PROGRESS.md from current task statuses, recent runs, and recent quality results before writing.
           </CardDescription>
           <Button className="mt-3" disabled={isBusy} onClick={() => void loadProgressPreview()} variant="primary">
             Preview Progress Sync
@@ -208,6 +243,11 @@ export function DocumentsPanel({ project }: { project: ProjectSummary | null }):
         title="Write selected markdown files?"
       >
         <div className="grid gap-3">
+          {overwriteCount > 0 ? (
+            <p className="text-sm text-muted">
+              {overwriteCount} file(s) will overwrite existing content. Review the preview before continuing.
+            </p>
+          ) : null}
           <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs text-muted">
             {filesToWrite.map((file) => `${file.exists ? "Overwrite" : "Create"} ${file.name}`).join("\n")}
           </pre>

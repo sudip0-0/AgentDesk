@@ -55,10 +55,11 @@ const listRecentQualityChecks = (projectId: string): QualityCheckRecord[] => {
     .map(toQualityCheckRecord);
 };
 
-const ensurePreviewPath = (projectPath: string, file: DocumentPreviewFile): void => {
+export const validateDocumentPreviewFile = (projectPath: string, file: DocumentPreviewFile): void => {
   const expectedPath = resolve(projectPath, file.name);
+  const resolvedPath = resolve(file.path);
 
-  if (resolve(file.path) !== expectedPath || !isPathInsideRoot(projectPath, file.path)) {
+  if (resolvedPath !== expectedPath || !isPathInsideRoot(projectPath, resolvedPath)) {
     throw new Error(`Document path is outside the selected project: ${file.name}`);
   }
 };
@@ -119,7 +120,7 @@ export const writePreviewedDocuments = (input: DocumentsWriteInput): DocumentsWr
   const writtenFiles: string[] = [];
 
   for (const file of input.files) {
-    ensurePreviewPath(project.path, file);
+    validateDocumentPreviewFile(project.path, file);
     writeFileSync(resolve(file.path), file.content, "utf8");
     writtenFiles.push(file.path);
   }

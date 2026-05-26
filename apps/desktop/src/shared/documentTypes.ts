@@ -39,3 +39,9 @@ export interface ProgressPreviewResult {
   projectId: string;
   file: DocumentPreviewFile;
 }
+
+export type DocumentPreviewMode = "defaults" | "progress";
+
+export interface DocumentPanelRequest {
+  mode: DocumentPreviewMode;
+}

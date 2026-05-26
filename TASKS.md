@@ -515,7 +515,7 @@ Sync task progress to markdown.
 
 Acceptance Criteria:
 
-- Task status changes can update PROGRESS.md.
+- Task status changes can update PROGRESS.md via Docs preview from the task board.
 - Run summary is added.
 - Quality result is added.
 - User can preview before writing.

@@ -56,6 +56,7 @@ interface TaskBoardProps {
   onTasksChanged: () => void;
   onLaunchInTerminal: (task: TaskRecord, agentProfile?: AgentProfileRecord) => void;
   onRunQualityChecks: (task: TaskRecord) => void;
+  onSyncProgress: () => void;
   onSendPromptToTerminal: (request: PromptSendRequest) => void;
 }
 
@@ -64,6 +65,7 @@ export function TaskBoard({
   onTasksChanged,
   onLaunchInTerminal,
   onRunQualityChecks,
+  onSyncProgress,
   onSendPromptToTerminal
 }: TaskBoardProps): React.JSX.Element {
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
@@ -269,6 +271,7 @@ export function TaskBoard({
       });
       setTasks((current) => current.map((task) => (task.id === taskId ? updatedTask : task)));
       setSelectedTaskId(taskId);
+      setMessage("Task status updated. Sync PROGRESS.md when you are ready to record progress.");
       onTasksChanged();
     } catch (statusError) {
       setError(statusError instanceof Error ? statusError.message : "Failed to update task status.");
@@ -410,6 +413,7 @@ export function TaskBoard({
         onFixContextChange={setFixContext}
         agentProfiles={agentProfiles}
         onRunQualityChecks={onRunQualityChecks}
+        onSyncProgress={onSyncProgress}
         onLaunchInTerminal={(task, profile) => {
           if (!profile || !project) {
             onLaunchInTerminal(task);
@@ -570,6 +574,7 @@ function TaskDetailPanel({
   onFixContextChange,
   onLaunchInTerminal,
   onRunQualityChecks,
+  onSyncProgress,
   onSendPromptToTerminal,
   onStatusChange,
   selectedAgentProfileId,
@@ -587,6 +592,7 @@ function TaskDetailPanel({
   onFixContextChange: (value: string) => void;
   onLaunchInTerminal: (task: TaskRecord, profile?: AgentProfileRecord) => void;
   onRunQualityChecks: (task: TaskRecord) => void;
+  onSyncProgress: () => void;
   onSendPromptToTerminal: (task: TaskRecord, templateId: PromptTemplateId) => void;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
   selectedAgentProfileId: string;
@@ -659,6 +665,9 @@ function TaskDetailPanel({
           </Button>
           <Button onClick={() => onRunQualityChecks(task)} variant="secondary">
             Run Quality Checks
+          </Button>
+          <Button onClick={onSyncProgress} variant="secondary">
+            Sync PROGRESS.md
           </Button>
           <Button onClick={() => onEdit(task)} variant="secondary">
             Edit

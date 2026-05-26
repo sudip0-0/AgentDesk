@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildProgressMarkdown } from "./documentGenerator.js";
+import { buildDefaultDocumentMarkdown, buildProgressMarkdown } from "./documentGenerator.js";
 import type { ProjectOverview } from "./projectTypes.js";
 import type { TaskRecord } from "./taskTypes.js";
 
@@ -89,5 +89,18 @@ describe("documentGenerator", () => {
     expect(markdown).toContain("| Done | 1 |");
     expect(markdown).toContain("Build docs: completed, exit 0");
     expect(markdown).toContain("Tests: passed, exit 0");
+  });
+
+  it("includes project context in generated product docs", () => {
+    const markdown = buildDefaultDocumentMarkdown({
+      fileName: "PRODUCT.md",
+      overview,
+      tasks: [task],
+      qualityChecks: [],
+      generatedAt: "2026-01-01T00:04:00.000Z"
+    });
+
+    expect(markdown).toContain("Demo");
+    expect(markdown).toContain("Current Snapshot");
   });
 });

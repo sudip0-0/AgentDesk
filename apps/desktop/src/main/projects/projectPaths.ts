@@ -23,7 +23,16 @@ export const normalizeProjectPath = (folderPath: string): string => {
 
 export const isPathInsideRoot = (rootPath: string, candidatePath: string): boolean => {
   const root = normalizeProjectPath(rootPath);
-  const candidate = normalizeProjectPath(candidatePath);
+  let candidate = resolve(candidatePath);
+
+  if (existsSync(candidate)) {
+    try {
+      candidate = realpathSync(candidate);
+    } catch {
+      // Keep the resolved path when realpath fails (for example, permission errors).
+    }
+  }
+
   const relativePath = relative(root, candidate);
 
   return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));

@@ -9,6 +9,7 @@ import { AgentProfilesPanel } from "./components/AgentProfilesPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
 import { GitPanel } from "./components/GitPanel";
 import { QualityPanel } from "./components/QualityPanel";
+import type { DocumentPanelRequest } from "../../shared/documentTypes";
 import type { QualityRunContext } from "../../shared/qualityTypes";
 import { TaskBoard } from "./components/TaskBoard";
 import { TerminalPanel } from "./components/TerminalPanel";
@@ -45,6 +46,7 @@ export function App(): React.JSX.Element {
   const [terminalLaunch, setTerminalLaunch] = useState<TaskTerminalLaunch | null>(null);
   const [promptSendRequest, setPromptSendRequest] = useState<PromptSendRequest | null>(null);
   const [qualityRunContext, setQualityRunContext] = useState<QualityRunContext | null>(null);
+  const [documentRequest, setDocumentRequest] = useState<DocumentPanelRequest | null>(null);
 
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
 
@@ -275,6 +277,10 @@ export function App(): React.JSX.Element {
                 setQualityRunContext({ taskId: task.id, taskTitle: task.title });
                 setActiveNav("quality");
               }}
+              onSyncProgress={() => {
+                setDocumentRequest({ mode: "progress" });
+                setActiveNav("documents");
+              }}
               onSendPromptToTerminal={(request: PromptSendRequest) => {
                 setPromptSendRequest(request);
                 setActiveNav("terminal");
@@ -297,7 +303,13 @@ export function App(): React.JSX.Element {
 
           {activeNav === "git" ? <GitPanel project={activeProject} /> : null}
 
-          {activeNav === "documents" ? <DocumentsPanel project={activeProject} /> : null}
+          {activeNav === "documents" ? (
+            <DocumentsPanel
+              onRequestHandled={() => setDocumentRequest(null)}
+              project={activeProject}
+              request={documentRequest}
+            />
+          ) : null}
 
           <section className="grid gap-3 md:grid-cols-3">
             <Card>
