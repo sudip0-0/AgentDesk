@@ -1,11 +1,8 @@
 import type { WebContents } from "electron";
 import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
-import {
-  getDefaultShell,
-  normalizeTerminalSize,
-  resolveTerminalCwd
-} from "./terminalConfig.js";
+import { redactSecrets } from "./logRedaction.js";
+import { normalizeTerminalSize, resolveShell, resolveTerminalCwd } from "./terminalConfig.js";
 import type {
   CreateTerminalRequest,
   CreateTerminalResult,
@@ -23,13 +20,17 @@ interface TerminalSession {
 export class TerminalSessionManager {
   private readonly sessions = new Map<string, TerminalSession>();
 
+  public hasActiveSessions(): boolean {
+    return this.sessions.size > 0;
+  }
+
   public create(
     request: CreateTerminalRequest,
     webContents: WebContents
   ): CreateTerminalResult {
     const cwd = resolveTerminalCwd(request.cwd);
     const size = normalizeTerminalSize(request.cols, request.rows);
-    const shell = getDefaultShell();
+    const shell = resolveShell(request.shell);
     const id = randomUUID();
 
     const pty = spawn(shell, [], {
@@ -48,7 +49,7 @@ export class TerminalSessionManager {
 
     pty.onData((data) => {
       if (!webContents.isDestroyed()) {
-        webContents.send("terminal:data", { id, data });
+        webContents.send("terminal:data", { id, data: redactSecrets(data) });
       }
     });
 

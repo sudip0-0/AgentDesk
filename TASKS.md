@@ -282,7 +282,7 @@ Acceptance Criteria:
 
 ### TASK-0502: Add xterm.js Renderer
 
-Status: running
+Status: done
 
 Goal:
 Display terminal sessions in the renderer.

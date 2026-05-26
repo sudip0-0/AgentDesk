@@ -1,44 +1,86 @@
-import { ipcMain, type IpcMainInvokeEvent } from "electron";
+import { ipcMain, type IpcMainInvokeEvent, type WebContents } from "electron";
 import { TerminalSessionManager } from "./terminalSessionManager.js";
-import type {
-  CreateTerminalRequest,
-  TerminalKillRequest,
-  TerminalResizeRequest,
-  TerminalWriteRequest
-} from "../../shared/terminalTypes.js";
+import {
+  createTerminalRequestSchema,
+  parseIpcPayload,
+  terminalKillRequestSchema,
+  terminalResizeRequestSchema,
+  terminalWriteRequestSchema
+} from "./terminalValidation.js";
 
 export const terminalSessionManager = new TerminalSessionManager();
 
+const sendTerminalError = (
+  webContents: WebContents,
+  id: string | undefined,
+  message: string
+): void => {
+  if (!webContents.isDestroyed() && id) {
+    webContents.send("terminal:error", { id, message });
+  }
+};
+
 export const registerTerminalIpc = (): void => {
-  ipcMain.handle(
-    "terminal:create",
-    (event: IpcMainInvokeEvent, request: CreateTerminalRequest) =>
-      terminalSessionManager.create(request, event.sender)
-  );
+  ipcMain.handle("terminal:create", (event: IpcMainInvokeEvent, payload: unknown) => {
+    const parsed = parseIpcPayload(createTerminalRequestSchema, payload);
 
-  ipcMain.on("terminal:write", (event, request: TerminalWriteRequest) => {
+    if (!parsed.success) {
+      throw new Error(parsed.message);
+    }
+
     try {
-      terminalSessionManager.write(request, event.sender);
+      return terminalSessionManager.create(parsed.data, event.sender);
     } catch (error) {
-      event.sender.send("terminal:error", {
-        id: request.id,
-        message: error instanceof Error ? error.message : "Failed to write to terminal."
-      });
+      const message = error instanceof Error ? error.message : "Failed to create terminal.";
+      throw new Error(message);
     }
   });
 
-  ipcMain.on("terminal:resize", (event, request: TerminalResizeRequest) => {
+  ipcMain.on("terminal:write", (event, payload: unknown) => {
+    const parsed = parseIpcPayload(terminalWriteRequestSchema, payload);
+
+    if (!parsed.success) {
+      sendTerminalError(event.sender, undefined, parsed.message);
+      return;
+    }
+
     try {
-      terminalSessionManager.resize(request, event.sender);
+      terminalSessionManager.write(parsed.data, event.sender);
     } catch (error) {
-      event.sender.send("terminal:error", {
-        id: request.id,
-        message: error instanceof Error ? error.message : "Failed to resize terminal."
-      });
+      sendTerminalError(
+        event.sender,
+        parsed.data.id,
+        error instanceof Error ? error.message : "Failed to write to terminal."
+      );
     }
   });
 
-  ipcMain.handle("terminal:kill", (event: IpcMainInvokeEvent, request: TerminalKillRequest) => {
-    terminalSessionManager.kill(request.id, event.sender);
+  ipcMain.on("terminal:resize", (event, payload: unknown) => {
+    const parsed = parseIpcPayload(terminalResizeRequestSchema, payload);
+
+    if (!parsed.success) {
+      sendTerminalError(event.sender, undefined, parsed.message);
+      return;
+    }
+
+    try {
+      terminalSessionManager.resize(parsed.data, event.sender);
+    } catch (error) {
+      sendTerminalError(
+        event.sender,
+        parsed.data.id,
+        error instanceof Error ? error.message : "Failed to resize terminal."
+      );
+    }
+  });
+
+  ipcMain.handle("terminal:kill", (event: IpcMainInvokeEvent, payload: unknown) => {
+    const parsed = parseIpcPayload(terminalKillRequestSchema, payload);
+
+    if (!parsed.success) {
+      throw new Error(parsed.message);
+    }
+
+    terminalSessionManager.kill(parsed.data.id, event.sender);
   });
 };

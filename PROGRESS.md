@@ -33,6 +33,7 @@ AgentDesk MVP is a Windows desktop app that can:
 - Completed the initial node-pty backend for creating, writing to, resizing, and killing PTY sessions.
 - Added safe terminal IPC through preload instead of exposing shell or Node access to the renderer.
 - Added an xterm.js renderer panel with working-directory selection, terminal input, streamed output, resize forwarding, kill action, and visible error state.
+- Added multi-tab terminal UI, PowerShell/CMD shell selection, IPC validation, secret redaction on streamed output, and close confirmation when sessions are active.
 - Added terminal tests for default shell sizing logic and PTY session startup/output/exit behavior.
 
 ### Product Discovery
@@ -70,14 +71,13 @@ Created initial docs:
 
 ## In Progress
 
-TASK-0502 remains partially in progress because multiple terminal tabs are not implemented yet.
+None.
 
 ## Next Tasks
 
 Next focused tasks:
 
-1. Complete multiple terminal tab support for TASK-0502.
-2. TASK-0503: Save Terminal Logs.
+1. TASK-0503: Save Terminal Logs.
 3. TASK-0102: Add Tailwind CSS and Base UI System.
 4. TASK-0103: Add Local SQLite Database.
 

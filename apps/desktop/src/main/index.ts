@@ -1,8 +1,24 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, dialog, shell } from "electron";
 import { join } from "node:path";
 import { registerTerminalIpc, terminalSessionManager } from "./terminal/terminalIpc.js";
 
-const createMainWindow = (): void => {
+let isQuitting = false;
+
+const confirmQuitWithActiveTerminals = (window: BrowserWindow): boolean => {
+  const choice = dialog.showMessageBoxSync(window, {
+    type: "warning",
+    buttons: ["Cancel", "Close Anyway"],
+    defaultId: 0,
+    cancelId: 0,
+    title: "Close AgentDesk",
+    message: "Terminal sessions are still running",
+    detail: "Closing will stop all active terminal processes."
+  });
+
+  return choice === 1;
+};
+
+const createMainWindow = (): BrowserWindow => {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -27,6 +43,19 @@ const createMainWindow = (): void => {
     return { action: "deny" };
   });
 
+  mainWindow.on("close", (event) => {
+    if (isQuitting || !terminalSessionManager.hasActiveSessions()) {
+      return;
+    }
+
+    event.preventDefault();
+    if (confirmQuitWithActiveTerminals(mainWindow)) {
+      isQuitting = true;
+      terminalSessionManager.killAll();
+      mainWindow.close();
+    }
+  });
+
   mainWindow.webContents.on("destroyed", () => {
     terminalSessionManager.killForWebContents(mainWindow.webContents.id);
   });
@@ -34,10 +63,11 @@ const createMainWindow = (): void => {
   if (process.env.VITE_DEV_SERVER_URL) {
     void mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
     mainWindow.webContents.openDevTools({ mode: "detach" });
-    return;
+  } else {
+    void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
 
-  void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+  return mainWindow;
 };
 
 app.whenReady().then(() => {
@@ -51,8 +81,25 @@ app.whenReady().then(() => {
   });
 });
 
-app.on("before-quit", () => {
-  terminalSessionManager.killAll();
+app.on("before-quit", (event) => {
+  if (isQuitting || !terminalSessionManager.hasActiveSessions()) {
+    return;
+  }
+
+  const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+
+  if (!window) {
+    terminalSessionManager.killAll();
+    return;
+  }
+
+  event.preventDefault();
+
+  if (confirmQuitWithActiveTerminals(window)) {
+    isQuitting = true;
+    terminalSessionManager.killAll();
+    app.quit();
+  }
 });
 
 app.on("window-all-closed", () => {

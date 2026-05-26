@@ -54,4 +54,44 @@ describe("TerminalSessionManager", () => {
     expect(events.some((event) => event.channel === "terminal:data")).toBe(true);
     expect(events.some((event) => event.channel === "terminal:exit")).toBe(true);
   }, 10000);
+
+  it("rejects writes from a different web contents owner", () => {
+    const manager = new TerminalSessionManager();
+    const owner = {
+      id: 1,
+      isDestroyed: () => false,
+      send: () => undefined
+    } as unknown as WebContents;
+    const other = {
+      id: 2,
+      isDestroyed: () => false,
+      send: () => undefined
+    } as unknown as WebContents;
+
+    const session = manager.create({ cwd: process.cwd(), cols: 80, rows: 24 }, owner);
+
+    expect(() => manager.write({ id: session.id, data: "\r" }, other)).toThrow(
+      /not found/i
+    );
+
+    manager.kill(session.id, owner);
+  });
+
+  it("tracks active sessions and kills all", () => {
+    const manager = new TerminalSessionManager();
+    const webContents = {
+      id: 3,
+      isDestroyed: () => false,
+      send: () => undefined
+    } as unknown as WebContents;
+
+    expect(manager.hasActiveSessions()).toBe(false);
+
+    const session = manager.create({ cwd: process.cwd(), cols: 80, rows: 24 }, webContents);
+    expect(manager.hasActiveSessions()).toBe(true);
+
+    manager.killAll();
+    expect(manager.hasActiveSessions()).toBe(false);
+    expect(() => manager.kill(session.id, webContents)).toThrow(/not found/i);
+  });
 });

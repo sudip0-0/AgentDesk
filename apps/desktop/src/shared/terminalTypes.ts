@@ -1,7 +1,10 @@
+export type TerminalShell = "powershell" | "cmd";
+
 export interface CreateTerminalRequest {
   cwd?: string;
   cols?: number;
   rows?: number;
+  shell?: TerminalShell;
 }
 
 export interface CreateTerminalResult {

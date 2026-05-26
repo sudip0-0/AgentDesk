@@ -180,9 +180,84 @@ button {
   background: var(--panel);
 }
 
+.terminal-tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-tab {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #10161d;
+}
+
+.terminal-tab-active {
+  border-color: rgba(81, 180, 165, 0.55);
+  background: var(--panel-strong);
+}
+
+.terminal-tab-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.terminal-tab-active .terminal-tab-button {
+  color: var(--text);
+}
+
+.terminal-tab-title {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.terminal-tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.terminal-tab-close {
+  padding: 0 8px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.terminal-tab-close:hover {
+  color: var(--text);
+}
+
+.terminal-tab-add {
+  padding: 6px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .terminal-toolbar {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr minmax(120px, 160px) auto;
   gap: 12px;
   align-items: end;
 }
@@ -198,7 +273,8 @@ button {
   font-weight: 700;
 }
 
-.cwd-field input {
+.cwd-field input,
+.shell-field select {
   width: 100%;
   min-width: 0;
   padding: 9px 10px;
@@ -207,6 +283,17 @@ button {
   color: var(--text);
   background: #10161d;
   font: inherit;
+}
+
+.shell-field {
+  display: grid;
+  gap: 6px;
+}
+
+.shell-field span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .terminal-actions {
@@ -284,6 +371,7 @@ button {
 }
 
 .terminal-frame {
+  position: relative;
   min-height: 0;
   overflow: hidden;
   padding: 8px;
@@ -292,10 +380,25 @@ button {
   background: #0d1117;
 }
 
+.terminal-tab-pane {
+  position: absolute;
+  inset: 8px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.terminal-tab-pane-active {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.terminal-tab-pane .xterm,
 .terminal-frame .xterm {
   height: 100%;
 }
 
+.terminal-tab-pane .xterm-screen,
+.terminal-tab-pane .xterm-viewport,
 .terminal-frame .xterm-screen,
 .terminal-frame .xterm-viewport {
   width: 100%;

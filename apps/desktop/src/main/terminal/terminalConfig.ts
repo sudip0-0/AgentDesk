@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, resolve } from "node:path";
+import type { TerminalShell } from "../../shared/terminalTypes.js";
 
 export const DEFAULT_TERMINAL_COLS = 80;
 export const DEFAULT_TERMINAL_ROWS = 24;
@@ -11,7 +12,15 @@ export interface TerminalSize {
 }
 
 export const getDefaultShell = (platform = process.platform): string => {
+  return resolveShell(undefined, platform);
+};
+
+export const resolveShell = (shell?: TerminalShell, platform = process.platform): string => {
   if (platform === "win32") {
+    if (shell === "cmd") {
+      return process.env.ComSpec ?? "cmd.exe";
+    }
+
     return "powershell.exe";
   }
 
