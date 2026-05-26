@@ -42,7 +42,19 @@ export const promptTemplates: PromptTemplate[] = [
 export interface PromptContext {
   project: Pick<ProjectSummary, "name" | "path">;
   task: TaskRecord;
+  /** Failed quality output or review notes injected into fix prompts until Phase 7 automation exists. */
+  fixContext?: string;
 }
+
+export const createPromptContext = (
+  project: Pick<ProjectSummary, "name" | "path">,
+  task: TaskRecord,
+  options?: { fixContext?: string }
+): PromptContext => ({
+  project,
+  task,
+  fixContext: options?.fixContext?.trim() ? options.fixContext.trim() : undefined
+});
 
 const defaultDocsToRead = [
   "README.md",
@@ -176,6 +188,12 @@ const buildFixPrompt = (context: PromptContext): string =>
     "",
     "## Files And Docs To Read First",
     buildReadFirstSection(context.task),
+    "",
+    "## Failed Checks And Required Corrections",
+    fallback(
+      context.fixContext ?? "",
+      "No failed checks recorded yet. Add lint, test, or review output in the fix context field before sending this prompt."
+    ),
     "",
     "## Fix Instructions",
     "- Reproduce or inspect the failed check, review finding, or incomplete criterion first.",

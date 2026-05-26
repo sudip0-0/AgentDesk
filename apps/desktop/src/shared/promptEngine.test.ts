@@ -50,4 +50,14 @@ describe("prompt engine", () => {
     expect(buildPrompt("test", context)).toContain("Prefer pure logic");
     expect(buildPrompt("security", context)).toContain("IPC input is validated");
   });
+
+  it("injects failed check context into fix prompts", () => {
+    const prompt = buildPrompt("fix", {
+      ...context,
+      fixContext: "npm run typecheck failed: TS2345 in App.tsx"
+    });
+
+    expect(prompt).toContain("Failed Checks And Required Corrections");
+    expect(prompt).toContain("npm run typecheck failed: TS2345 in App.tsx");
+  });
 });

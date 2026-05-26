@@ -254,8 +254,8 @@ Generate review and fix prompts for agent output.
 Acceptance Criteria:
 
 - Review prompt checks acceptance criteria, security, tests, architecture, and unrelated changes.
-- Fix prompt includes failed checks and required corrections.
-- User can copy prompts or send them to terminal.
+- Fix prompt includes failed checks and required corrections. (Manual fix context field until Phase 7 quality results are linked automatically.)
+- User can copy prompts or send them to terminal. (Long sends require confirmation; delivery copies to clipboard and writes line by line.)
 
 ---
 

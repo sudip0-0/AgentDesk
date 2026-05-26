@@ -40,7 +40,7 @@ Target MVP capabilities (see README.md):
 - Completed the initial node-pty backend for creating, writing to, resizing, and killing PTY sessions.
 - Added safe terminal IPC through preload instead of exposing shell or Node access to the renderer.
 - Added an xterm.js renderer panel with working-directory selection, terminal input, streamed output, resize forwarding, kill action, and visible error state.
-- Added multi-tab terminal UI, PowerShell/CMD shell selection, IPC validation, secret redaction on streamed output, and close confirmation when sessions are active.
+- Added multi-tab terminal UI, PowerShell/CMD shell selection, IPC validation, secret redaction on streamed output, close confirmation when sessions are active, and best-effort waiting-for-input detection.
 - Added terminal tests for default shell sizing logic and PTY session startup/output/exit behavior.
 
 ### Phase 2: Project Workspace
@@ -62,7 +62,7 @@ Target MVP capabilities (see README.md):
 - Completed TASK-0401: reusable prompt template system with implementation, review, fix, test, and security templates.
 - Completed TASK-0402: implementation prompts generated from project and task contract context.
 - Completed TASK-0403: review and fix prompts available alongside test and security prompts.
-- Added prompt preview UI, copy prompt action, and send-to-active-terminal action.
+- Added prompt preview UI, copy prompt action, fix-context field for failed checks, send confirmation for long prompts, and clipboard-first line-by-line terminal delivery.
 
 ### Phase 6 (partial): Task-Linked Runs
 

@@ -1,11 +1,8 @@
+import type { ProjectSummary } from "./projectTypes.js";
 import type { TaskRecord } from "./taskTypes.js";
-import { buildPrompt } from "./promptEngine.js";
+import { buildPrompt, createPromptContext } from "./promptEngine.js";
 
 export const buildImplementationPrompt = (
   task: TaskRecord,
-  projectName: string
-): string =>
-  buildPrompt("implementation", {
-    project: { name: projectName, path: "Not provided." },
-    task
-  });
+  project: Pick<ProjectSummary, "name" | "path">
+): string => buildPrompt("implementation", createPromptContext(project, task));

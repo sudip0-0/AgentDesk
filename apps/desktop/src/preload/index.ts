@@ -3,6 +3,7 @@ import type { AgentDeskApi } from "../shared/agentdeskApi.js";
 import type {
   CreateTerminalRequest,
   CreateTerminalResult,
+  TerminalActivityEvent,
   TerminalDataEvent,
   TerminalErrorEvent,
   TerminalExitEvent,
@@ -30,10 +31,11 @@ import type {
 type TerminalDataListener = (event: TerminalDataEvent) => void;
 type TerminalExitListener = (event: TerminalExitEvent) => void;
 type TerminalErrorListener = (event: TerminalErrorEvent) => void;
+type TerminalActivityListener = (event: TerminalActivityEvent) => void;
 type Unsubscribe = () => void;
 
 const subscribe = <T>(
-  channel: "terminal:data" | "terminal:exit" | "terminal:error",
+  channel: "terminal:data" | "terminal:exit" | "terminal:error" | "terminal:activity",
   listener: (event: T) => void
 ): Unsubscribe => {
   const wrappedListener = (_event: Electron.IpcRendererEvent, payload: T): void => {
@@ -99,7 +101,9 @@ const agentdeskApi: AgentDeskApi = {
     onExit: (listener: TerminalExitListener): Unsubscribe =>
       subscribe<TerminalExitEvent>("terminal:exit", listener),
     onError: (listener: TerminalErrorListener): Unsubscribe =>
-      subscribe<TerminalErrorEvent>("terminal:error", listener)
+      subscribe<TerminalErrorEvent>("terminal:error", listener),
+    onActivity: (listener: TerminalActivityListener): Unsubscribe =>
+      subscribe<TerminalActivityEvent>("terminal:activity", listener)
   }
 };
 

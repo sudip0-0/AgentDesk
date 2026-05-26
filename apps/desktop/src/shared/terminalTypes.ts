@@ -1,4 +1,8 @@
+import type { TerminalActivityState } from "./terminalActivity.js";
+
 export type TerminalShell = "powershell" | "cmd";
+
+export type { TerminalActivityState };
 
 export interface CreateTerminalRequest {
   projectId: string;
@@ -30,6 +34,11 @@ export interface TerminalExitEvent {
 export interface TerminalErrorEvent {
   id: string;
   message: string;
+}
+
+export interface TerminalActivityEvent {
+  id: string;
+  state: TerminalActivityState;
 }
 
 export interface TerminalResizeRequest {

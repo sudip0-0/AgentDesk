@@ -10,6 +10,7 @@ import type {
 import type {
   CreateTerminalRequest,
   CreateTerminalResult,
+  TerminalActivityEvent,
   TerminalDataEvent,
   TerminalErrorEvent,
   TerminalExitEvent,
@@ -60,5 +61,6 @@ export interface AgentDeskApi {
     onData: (listener: (event: TerminalDataEvent) => void) => Unsubscribe;
     onExit: (listener: (event: TerminalExitEvent) => void) => Unsubscribe;
     onError: (listener: (event: TerminalErrorEvent) => void) => Unsubscribe;
+    onActivity: (listener: (event: TerminalActivityEvent) => void) => Unsubscribe;
   };
 }

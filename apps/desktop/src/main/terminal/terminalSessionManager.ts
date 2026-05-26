@@ -13,9 +13,15 @@ import { buildPrompt } from "../../shared/promptEngine.js";
 import { isPathInsideRoot } from "../projects/projectPaths.js";
 import { redactSecrets } from "./logRedaction.js";
 import { normalizeTerminalSize, resolveShell, resolveTerminalCwd } from "./terminalConfig.js";
+import {
+  appendOutputTail,
+  detectWaitingForInput,
+  type TerminalActivityState
+} from "../../shared/terminalActivity.js";
 import type {
   CreateTerminalRequest,
   CreateTerminalResult,
+  TerminalActivityEvent,
   TerminalExitEvent,
   TerminalResizeRequest,
   TerminalWriteRequest
@@ -29,6 +35,8 @@ interface TerminalSession {
   projectId: string;
   taskId: string | null;
   ownerWebContentsId: number;
+  activityState: TerminalActivityState;
+  outputTail: string;
   closingStatus?: AgentRunStatus;
   pty: IPty;
 }
@@ -117,12 +125,21 @@ export class TerminalSessionManager {
       projectId: project.id,
       taskId: linkedTask?.id ?? null,
       ownerWebContentsId: webContents.id,
+      activityState: "busy",
+      outputTail: "",
       pty
     });
 
     pty.onData((data) => {
       const redacted = redactSecrets(data);
       this.logWriter.appendOutput(id, agentRunId, redacted);
+
+      const session = this.sessions.get(id);
+
+      if (session) {
+        session.outputTail = appendOutputTail(session.outputTail, redacted);
+        this.updateActivityState(session, webContents);
+      }
 
       if (!webContents.isDestroyed()) {
         webContents.send("terminal:data", { id, data: redacted });
@@ -154,6 +171,7 @@ export class TerminalSessionManager {
   public write(request: TerminalWriteRequest, webContents: WebContents): void {
     const session = this.getOwnedSession(request.id, webContents.id);
     session.pty.write(request.data);
+    this.setActivityState(session, "busy", webContents);
   }
 
   public resize(request: TerminalResizeRequest, webContents: WebContents): void {
@@ -181,6 +199,28 @@ export class TerminalSessionManager {
     for (const session of this.sessions.values()) {
       session.closingStatus = "killed";
       session.pty.kill();
+    }
+  }
+
+  private updateActivityState(session: TerminalSession, webContents: WebContents): void {
+    const waiting = detectWaitingForInput(session.outputTail);
+    this.setActivityState(session, waiting ? "waiting_for_input" : "busy", webContents);
+  }
+
+  private setActivityState(
+    session: TerminalSession,
+    state: TerminalActivityState,
+    webContents: WebContents
+  ): void {
+    if (session.activityState === state) {
+      return;
+    }
+
+    session.activityState = state;
+
+    if (!webContents.isDestroyed()) {
+      const event: TerminalActivityEvent = { id: session.id, state };
+      webContents.send("terminal:activity", event);
     }
   }
 

@@ -167,3 +167,24 @@ Consequences:
 - Faster MVP.
 - Easier quality checks.
 - Python, Flutter, .NET, Go, and Rust can be added later.
+
+---
+
+## Decision 9: Keep Prompt Engine in Desktop Shared Code for MVP
+
+Status: accepted
+
+Context:
+`ARCHITECTURE.md` describes a future `packages/core/prompt-engine` module, but the MVP needs prompt generation immediately inside the Electron app.
+
+Decision:
+Implement prompt templates in `apps/desktop/src/shared/promptEngine.ts` as pure TypeScript with no Electron or filesystem dependencies.
+
+Reason:
+The renderer and main process can share the same prompt builder without new package wiring, and the logic is easy to test with Vitest.
+
+Consequences:
+
+- Faster delivery for Phase 4.
+- A later extraction into `packages/core/prompt-engine` remains straightforward.
+- Template versioning in markdown/files can be added without changing the IPC boundary.

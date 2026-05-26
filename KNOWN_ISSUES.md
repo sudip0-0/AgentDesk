@@ -34,10 +34,13 @@ Use agent adapter profiles. Keep status detection best-effort. Allow manual stat
 
 ## 3. Terminal Status Detection
 
-Status: expected risk
+Status: mitigated (best effort)
 
 Problem:
 The app may not always know if an agent is done, waiting, or stuck.
+
+Current behavior:
+AgentDesk uses heuristic waiting-for-input detection on recent terminal output (y/n prompts, Enter to continue, colon/question prompts). Detection resets to busy after user input. False positives and false negatives are still possible across different CLIs.
 
 Impact:
 Task status may need manual correction.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildImplementationPrompt } from "./buildTaskPrompt.js";
 
 describe("buildImplementationPrompt", () => {
-  it("includes task contract sections", () => {
+  it("includes task contract sections and project path", () => {
     const prompt = buildImplementationPrompt(
       {
         id: "770e8400-e29b-41d4-a716-446655440000",
@@ -22,10 +22,11 @@ describe("buildImplementationPrompt", () => {
         createdAt: new Date(0).toISOString(),
         updatedAt: new Date(0).toISOString()
       },
-      "AgentDesk"
+      { name: "AgentDesk", path: "C:/Projects/AgentDesk" }
     );
 
     expect(prompt).toContain('project "AgentDesk"');
+    expect(prompt).toContain("Project path: C:/Projects/AgentDesk");
     expect(prompt).toContain("Add task linking");
     expect(prompt).toContain("Link runs to tasks.");
     expect(prompt).toContain("npm test");

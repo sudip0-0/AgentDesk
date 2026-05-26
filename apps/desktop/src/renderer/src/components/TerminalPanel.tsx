@@ -1,9 +1,12 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { deliverPromptToTerminal } from "../../../shared/promptDelivery";
 import { buildPrompt } from "../../../shared/promptEngine";
 import type { PromptSendRequest } from "../../../shared/promptSendTypes";
+import type { TerminalActivityState } from "../../../shared/terminalActivity";
 import type {
+  TerminalActivityEvent,
   TerminalDataEvent,
   TerminalErrorEvent,
   TerminalExitEvent,
@@ -27,6 +30,8 @@ interface TerminalTab {
   runId: string | null;
   taskId: string | null;
   status: TerminalStatus;
+  activity: TerminalActivityState;
+  baseLabel: string;
   label: string;
   error: string | null;
 }
@@ -47,9 +52,22 @@ const createTab = (title?: string): TerminalTab => {
     runId: null,
     taskId: null,
     status: "idle",
+    activity: "busy",
+    baseLabel: "Not started",
     label: "Not started",
     error: null
   };
+};
+
+const formatRunningLabel = (
+  tab: TerminalTab,
+  activity: TerminalActivityState
+): string => {
+  if (activity === "waiting_for_input") {
+    return "Waiting for input";
+  }
+
+  return tab.baseLabel;
 };
 
 interface TerminalTabPaneProps {
@@ -355,14 +373,18 @@ export function TerminalPanel({
         rows: size.rows
       });
 
+      const baseLabel = options?.taskId
+        ? `Task run · ${result.shell}`
+        : `${result.shell} in ${result.cwd}`;
+
       updateTab(tab.id, {
         sessionId: result.id,
         runId: result.runId,
         taskId: options?.taskId ?? null,
         status: "running",
-        label: options?.taskId
-          ? `Task run · ${result.shell}`
-          : `${result.shell} in ${result.cwd}`,
+        activity: "busy",
+        baseLabel,
+        label: baseLabel,
         title: tab.title.startsWith("Terminal ") ? result.shell : tab.title
       });
 
@@ -440,9 +462,28 @@ export function TerminalPanel({
       }
     );
 
+    const removeActivityListener = window.agentdesk.terminals.onActivity(
+      ({ id, state }: TerminalActivityEvent) => {
+        setTabs((current) =>
+          current.map((tab) => {
+            if (tab.sessionId !== id || tab.status !== "running") {
+              return tab;
+            }
+
+            return {
+              ...tab,
+              activity: state,
+              label: formatRunningLabel(tab, state)
+            };
+          })
+        );
+      }
+    );
+
     return () => {
       removeExitListener();
       removeErrorListener();
+      removeActivityListener();
     };
   }, [onTaskStatusChanged]);
 
@@ -497,12 +538,51 @@ export function TerminalPanel({
       return;
     }
 
-    window.agentdesk.terminals.write({
-      id: activeTab.sessionId,
-      data: `${promptSendRequest.prompt}\r`
-    });
-    setLaunchMessage(`${promptSendRequest.label} sent to active terminal.`);
-    onPromptSendHandled();
+    const sessionId = activeTab.sessionId;
+    let cancelled = false;
+
+    const sendPrompt = async (): Promise<void> => {
+      try {
+        const result = await deliverPromptToTerminal({
+          prompt: promptSendRequest.prompt,
+          write: (data) => {
+            window.agentdesk.terminals.write({ id: sessionId, data });
+          },
+          copyToClipboard: async (text) => {
+            try {
+              await navigator.clipboard.writeText(text);
+              return true;
+            } catch {
+              return false;
+            }
+          }
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setLaunchMessage(
+          result.copiedToClipboard
+            ? `${promptSendRequest.label} copied to clipboard and sent to the active terminal line by line.`
+            : `${promptSendRequest.label} sent to the active terminal. Clipboard copy failed.`
+        );
+      } catch {
+        if (!cancelled) {
+          setLaunchMessage("Failed to send the prompt to the active terminal.");
+        }
+      } finally {
+        if (!cancelled) {
+          onPromptSendHandled();
+        }
+      }
+    };
+
+    void sendPrompt();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeTab?.sessionId, onPromptSendHandled, promptSendRequest]);
 
   useEffect(() => {
@@ -524,7 +604,14 @@ export function TerminalPanel({
   const canKill = Boolean(activeTab?.sessionId);
   const canViewTranscript = Boolean(activeTab?.runId);
 
-  const statusVariant = (status: TerminalStatus): "default" | "success" | "warning" | "danger" => {
+  const statusVariant = (
+    status: TerminalStatus,
+    activity: TerminalActivityState
+  ): "default" | "success" | "warning" | "danger" => {
+    if (status === "running" && activity === "waiting_for_input") {
+      return "warning";
+    }
+
     if (status === "running") {
       return "success";
     }
@@ -538,6 +625,14 @@ export function TerminalPanel({
     }
 
     return "default";
+  };
+
+  const statusLabel = (tab: TerminalTab): string => {
+    if (tab.status === "running" && tab.activity === "waiting_for_input") {
+      return "waiting for input";
+    }
+
+    return tab.status;
   };
 
   return (
@@ -563,7 +658,15 @@ export function TerminalPanel({
               type="button"
             >
               <span className="max-w-[140px] truncate">{tab.title}</span>
-              {tab.sessionId ? <span className="size-1.5 rounded-full bg-accent" aria-hidden /> : null}
+              {tab.sessionId ? (
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    tab.activity === "waiting_for_input" ? "bg-[#f0c674]" : "bg-accent"
+                  )}
+                  aria-hidden
+                />
+              ) : null}
             </button>
             <button
               aria-label={`Close ${tab.title}`}
@@ -626,7 +729,9 @@ export function TerminalPanel({
 
       {activeTab ? (
         <div className="flex min-w-0 items-center gap-2 text-xs text-muted">
-          <Badge variant={statusVariant(activeTab.status)}>{activeTab.status}</Badge>
+          <Badge variant={statusVariant(activeTab.status, activeTab.activity)}>
+            {statusLabel(activeTab)}
+          </Badge>
           <span className="truncate">{activeTab.label}</span>
           {activeTab.taskId ? <Badge variant="warning">Task linked</Badge> : null}
         </div>

@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { buildPrompt, promptTemplates, type PromptTemplateId } from "../../../shared/promptEngine";
+import {
+  buildPrompt,
+  createPromptContext,
+  promptTemplates,
+  type PromptTemplateId
+} from "../../../shared/promptEngine";
+import { shouldConfirmPromptSend } from "../../../shared/promptDelivery";
 import type { PromptSendRequest } from "../../../shared/promptSendTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { TaskInput, TaskPriority, TaskRecord, TaskStatus } from "../../../shared/taskTypes";
@@ -66,8 +72,47 @@ export function TaskBoard({
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<PromptTemplateId>("implementation");
+  const [fixContext, setFixContext] = useState("");
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  const [pendingSend, setPendingSend] = useState<{
+    task: TaskRecord;
+    templateId: PromptTemplateId;
+    prompt: string;
+    label: string;
+  } | null>(null);
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+
+  const buildTaskPrompt = (task: TaskRecord, templateId: PromptTemplateId): string => {
+    if (!project) {
+      return "";
+    }
+
+    return buildPrompt(
+      templateId,
+      createPromptContext(project, task, {
+        fixContext: templateId === "fix" ? fixContext : undefined
+      })
+    );
+  };
+
+  const requestSendPrompt = (task: TaskRecord, templateId: PromptTemplateId): void => {
+    const prompt = buildTaskPrompt(task, templateId);
+    const templateLabel = promptTemplates.find((template) => template.id === templateId)?.label ?? "Prompt";
+    const label = `${templateLabel} prompt`;
+
+    if (shouldConfirmPromptSend(prompt)) {
+      setPendingSend({ task, templateId, prompt, label });
+      setSendConfirmOpen(true);
+      return;
+    }
+
+    onSendPromptToTerminal({
+      id: crypto.randomUUID(),
+      prompt,
+      label
+    });
+  };
 
   const loadTasks = async (projectId: string): Promise<void> => {
     setIsLoading(true);
@@ -91,6 +136,7 @@ export function TaskBoard({
     setError(null);
     setEditingTaskId(null);
     setDraft(null);
+    setFixContext("");
 
     if (!project) {
       setTasks([]);
@@ -100,6 +146,10 @@ export function TaskBoard({
 
     void loadTasks(project.id);
   }, [project]);
+
+  useEffect(() => {
+    setFixContext("");
+  }, [selectedTaskId]);
 
   const openCreateDialog = (): void => {
     if (!project) {
@@ -303,13 +353,14 @@ export function TaskBoard({
       </div>
 
       <TaskDetailPanel
+        fixContext={fixContext}
         onCopyPrompt={async (task, templateId) => {
           if (!project) {
             return;
           }
 
           try {
-            const prompt = buildPrompt(templateId, { project, task });
+            const prompt = buildTaskPrompt(task, templateId);
             const templateLabel = promptTemplates.find((template) => template.id === templateId)?.label ?? "Prompt";
             await navigator.clipboard.writeText(prompt);
             setMessage(`${templateLabel} prompt copied.`);
@@ -319,22 +370,59 @@ export function TaskBoard({
         }}
         onDelete={() => setDeleteConfirmOpen(true)}
         onEdit={openEditDialog}
+        onFixContextChange={setFixContext}
         onLaunchInTerminal={onLaunchInTerminal}
-        onSendPromptToTerminal={(task, templateId) => {
-          const prompt = buildPrompt(templateId, { project, task });
-          const templateLabel = promptTemplates.find((template) => template.id === templateId)?.label ?? "Prompt";
-          onSendPromptToTerminal({
-            id: crypto.randomUUID(),
-            prompt,
-            label: `${templateLabel} prompt`
-          });
-        }}
+        onSendPromptToTerminal={requestSendPrompt}
         onStatusChange={(taskId, status) => void changeStatus(taskId, status)}
         project={project}
         selectedTemplateId={selectedTemplateId}
         setSelectedTemplateId={setSelectedTemplateId}
         task={selectedTask}
       />
+
+      <Dialog
+        description="Long prompts are copied to the clipboard and written to the active terminal line by line. Review before confirming."
+        onClose={() => {
+          setSendConfirmOpen(false);
+          setPendingSend(null);
+        }}
+        open={sendConfirmOpen && pendingSend !== null}
+        title="Send prompt to terminal?"
+      >
+        <p className="text-sm leading-relaxed text-muted">
+          This prompt is {pendingSend?.prompt.length.toLocaleString() ?? 0} characters. It will be copied
+          to the clipboard and sent to the active terminal session.
+        </p>
+        <div className="mt-4 flex justify-end gap-2 border-t border-border pt-4">
+          <Button
+            onClick={() => {
+              setSendConfirmOpen(false);
+              setPendingSend(null);
+            }}
+            variant="ghost"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (!pendingSend) {
+                return;
+              }
+
+              onSendPromptToTerminal({
+                id: crypto.randomUUID(),
+                prompt: pendingSend.prompt,
+                label: pendingSend.label
+              });
+              setSendConfirmOpen(false);
+              setPendingSend(null);
+            }}
+            variant="primary"
+          >
+            Send Prompt
+          </Button>
+        </div>
+      </Dialog>
 
       <Dialog
         description="This removes the task from the local board. Linked run history is kept, but the task reference is cleared."
@@ -369,7 +457,9 @@ function TaskDetailPanel({
   project,
   onEdit,
   onDelete,
+  fixContext,
   onCopyPrompt,
+  onFixContextChange,
   onLaunchInTerminal,
   onSendPromptToTerminal,
   onStatusChange,
@@ -378,9 +468,11 @@ function TaskDetailPanel({
 }: {
   task: TaskRecord | null;
   project: ProjectSummary;
+  fixContext: string;
   onEdit: (task: TaskRecord) => void;
   onDelete: () => void;
   onCopyPrompt: (task: TaskRecord, templateId: PromptTemplateId) => void;
+  onFixContextChange: (value: string) => void;
   onLaunchInTerminal: (task: TaskRecord) => void;
   onSendPromptToTerminal: (task: TaskRecord, templateId: PromptTemplateId) => void;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
@@ -398,7 +490,12 @@ function TaskDetailPanel({
 
   const selectedTemplate =
     promptTemplates.find((template) => template.id === selectedTemplateId) ?? promptTemplates[0];
-  const promptPreview = buildPrompt(selectedTemplateId, { project, task });
+  const promptPreview = buildPrompt(
+    selectedTemplateId,
+    createPromptContext(project, task, {
+      fixContext: selectedTemplateId === "fix" ? fixContext : undefined
+    })
+  );
 
   return (
     <aside className="grid content-start gap-3">
@@ -467,6 +564,18 @@ function TaskDetailPanel({
           </select>
         </label>
 
+        {selectedTemplateId === "fix" ? (
+          <label className="mt-3 grid gap-1.5">
+            <span className="text-xs font-bold text-muted">Fix Context</span>
+            <textarea
+              className="min-h-28 w-full resize-y rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+              onChange={(event) => onFixContextChange(event.target.value)}
+              placeholder="Paste failed lint/typecheck/test output or review findings..."
+              value={fixContext}
+            />
+          </label>
+        ) : null}
+
         <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
           {promptPreview}
         </pre>
@@ -479,6 +588,10 @@ function TaskDetailPanel({
             Send to Active Terminal
           </Button>
         </div>
+        <p className="mt-2 text-xs text-muted">
+          Send copies the prompt to the clipboard and writes it line by line into the active terminal.
+          Prompts over 500 characters require confirmation.
+        </p>
       </Card>
 
       <TaskContractSection label="Goal" value={task.goal} />
