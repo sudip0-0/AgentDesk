@@ -28,8 +28,8 @@ Renderer UI
         │             │             │
         ▼             ▼             ▼
 ┌──────────────┐ ┌──────────┐ ┌──────────────┐
-│ node-pty     │ │ SQLite   │ │ simple-git   │
-│ terminals    │ │ database │ │ git manager  │
+│ node-pty     │ │ SQLite   │ │ system git   │
+│ terminals    │ │ database │ │ CLI (main)   │
 └──────┬───────┘ └──────────┘ └──────────────┘
        │
        ▼
@@ -84,9 +84,9 @@ Used for local app data:
 
 Recommended for database schema and type-safe queries.
 
-### simple-git
+### System Git CLI
 
-Used for git operations.
+Git operations run in the Electron main process by spawning the local `git` executable (validated IPC, project-scoped paths). Git must be installed and available on `PATH` (Git for Windows on MVP targets).
 
 ## Process Model
 

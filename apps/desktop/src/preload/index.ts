@@ -37,6 +37,15 @@ import type {
   TerminalLogMeta
 } from "../shared/runLogTypes.js";
 import type {
+  GitCommitInput,
+  GitCommitResult,
+  GitCreateBranchInput,
+  GitDiffRequest,
+  GitDiffResult,
+  GitStageFilesInput,
+  GitStatusResult
+} from "../shared/gitTypes.js";
+import type {
   TaskDeleteInput,
   TaskInput,
   TaskRecord,
@@ -68,7 +77,7 @@ const subscribe = <T>(
 const agentdeskApi: AgentDeskApi = {
   app: {
     getName: (): string => "AgentDesk",
-    getPhase: (): string => "Quality Checks"
+    getPhase: (): string => "Git Integration"
   },
   db: {
     getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>
@@ -126,6 +135,18 @@ const agentdeskApi: AgentDeskApi = {
       ipcRenderer.invoke("quality:list-checks", input) as Promise<QualityCheckRecord[]>,
     createFixTask: (input: CreateFixTaskInput): Promise<TaskRecord> =>
       ipcRenderer.invoke("quality:create-fix-task", input) as Promise<TaskRecord>
+  },
+  git: {
+    getStatus: (projectId: string): Promise<GitStatusResult> =>
+      ipcRenderer.invoke("git:status", { projectId }) as Promise<GitStatusResult>,
+    getDiff: (request: GitDiffRequest): Promise<GitDiffResult> =>
+      ipcRenderer.invoke("git:diff", request) as Promise<GitDiffResult>,
+    createBranch: (input: GitCreateBranchInput): Promise<GitStatusResult> =>
+      ipcRenderer.invoke("git:create-branch", input) as Promise<GitStatusResult>,
+    stageFiles: (input: GitStageFilesInput): Promise<GitStatusResult> =>
+      ipcRenderer.invoke("git:stage-files", input) as Promise<GitStatusResult>,
+    commit: (input: GitCommitInput): Promise<GitCommitResult> =>
+      ipcRenderer.invoke("git:commit", input) as Promise<GitCommitResult>
   },
   terminals: {
     create: (request: CreateTerminalRequest): Promise<CreateTerminalResult> =>

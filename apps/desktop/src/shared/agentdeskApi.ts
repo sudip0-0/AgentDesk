@@ -24,6 +24,15 @@ import type {
   TerminalLogMeta
 } from "./runLogTypes.js";
 import type {
+  GitCommitInput,
+  GitCommitResult,
+  GitCreateBranchInput,
+  GitDiffRequest,
+  GitDiffResult,
+  GitStageFilesInput,
+  GitStatusResult
+} from "./gitTypes.js";
+import type {
   CreateTerminalRequest,
   CreateTerminalResult,
   TerminalActivityEvent,
@@ -83,6 +92,13 @@ export interface AgentDeskApi {
     run: (input: RunQualityChecksInput) => Promise<QualityCheckRecord[]>;
     listChecks: (input: ListQualityChecksInput) => Promise<QualityCheckRecord[]>;
     createFixTask: (input: CreateFixTaskInput) => Promise<TaskRecord>;
+  };
+  git: {
+    getStatus: (projectId: string) => Promise<GitStatusResult>;
+    getDiff: (request: GitDiffRequest) => Promise<GitDiffResult>;
+    createBranch: (input: GitCreateBranchInput) => Promise<GitStatusResult>;
+    stageFiles: (input: GitStageFilesInput) => Promise<GitStatusResult>;
+    commit: (input: GitCommitInput) => Promise<GitCommitResult>;
   };
   terminals: {
     create: (request: CreateTerminalRequest) => Promise<CreateTerminalResult>;

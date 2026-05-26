@@ -154,3 +154,18 @@ Mitigation:
 Add "Test Command" button for every agent profile.
 Terminal launch now surfaces spawn failures with PATH hints when the executable is missing.
 Do not store secrets in profile environment variables.
+
+---
+
+## 11. Git CLI Dependency
+
+Status: expected risk
+
+Problem:
+Git integration requires the system `git` executable on PATH.
+
+Impact:
+Git status, diff, stage, and commit features fail when Git is not installed.
+
+Mitigation:
+Surface a clear error when Git is missing. Install Git for Windows for MVP usage.

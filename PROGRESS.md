@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, Phase 5 terminal engine, Phase 6 agent profiles, and Phase 7 quality checks are complete. Full README MVP criteria are not done yet (git UI).
+Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, Phase 5 terminal engine, Phase 6 agent profiles, Phase 7 quality checks, and Phase 8 git integration are complete.
 
 ## MVP Definition
 
@@ -18,7 +18,7 @@ Target MVP capabilities (see README.md):
 | Launch CLI agents in embedded terminals | Done |
 | Save run logs | Done |
 | Run quality checks | Done |
-| Show git status and diffs | Not started (Phase 8) |
+| Show git status and diffs | Done |
 | Track progress locally | Partial (SQLite + overview; PROGRESS.md sync pending) |
 
 ## Completed
@@ -81,6 +81,13 @@ Target MVP capabilities (see README.md):
 - Completed TASK-0703: failed quality results can create follow-up fix tasks.
 - Added pass/fail/skipped result display, result detail output, and timeout enforcement per command.
 
+### Phase 8: Git Integration
+
+- Completed TASK-0801: git status screen shows repository state, current branch, changed files, and staged/unstaged groupings.
+- Completed TASK-0802: selected changed files display staged or unstaged diffs, with truncation and binary-file messaging.
+- Completed TASK-0803: users can create a branch from a task, stage selected files, edit a generated commit message, and confirm a local-only commit.
+- Added git IPC through preload with main-process execution, project-scoped file checks, untracked/mixed diffs, branch/commit confirmations, and graceful non-git folder handling.
+
 ### Product Discovery
 
 - Defined desktop-first direction.
@@ -95,7 +102,7 @@ Target MVP capabilities (see README.md):
 - Selected xterm.js for terminal rendering.
 - Selected node-pty for PTY backend.
 - Selected SQLite for local storage.
-- Selected simple-git for git integration.
+- Selected system Git CLI in the main process for git integration.
 - Defined major modules.
 
 ### Documentation
@@ -122,9 +129,8 @@ None.
 
 Next focused tasks:
 
-1. TASK-0801: Show Git Status.
-2. TASK-0802: Add Diff Viewer.
-3. TASK-0803: Create Branch and Commit.
+1. TASK-0901: Generate Project Docs.
+2. TASK-0902: Update PROGRESS.md from Task Status.
 
 ## Current Risks
 

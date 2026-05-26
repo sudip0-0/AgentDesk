@@ -8,6 +8,7 @@ import { registerProjectIpc } from "./projects/projectIpc.js";
 import { registerQualityIpc } from "./quality/qualityIpc.js";
 import { registerTaskIpc } from "./tasks/taskIpc.js";
 import { registerTerminalIpc, terminalSessionManager } from "./terminal/terminalIpc.js";
+import { registerGitIpc } from "./git/gitIpc.js";
 
 let isQuitting = false;
 
@@ -82,6 +83,7 @@ app.whenReady().then(() => {
   registerDatabaseIpc();
   registerAgentProfileIpc();
   registerProjectIpc();
+  registerGitIpc();
   registerQualityIpc();
   registerTaskIpc();
   registerRunLogIpc();

@@ -77,7 +77,7 @@ Terminal UI: xterm.js
 PTY backend: node-pty
 Local database: SQLite
 ORM/query builder: Drizzle
-Git integration: simple-git
+Git integration: system Git CLI (main process)
 State management: Zustand
 Styling: Tailwind CSS
 Packaging: electron-builder

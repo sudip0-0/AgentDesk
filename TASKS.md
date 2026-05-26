@@ -432,7 +432,7 @@ Acceptance Criteria:
 
 ### TASK-0801: Show Git Status
 
-Status: backlog
+Status: done
 
 Goal:
 Display current git state.
@@ -448,7 +448,7 @@ Acceptance Criteria:
 
 ### TASK-0802: Add Diff Viewer
 
-Status: backlog
+Status: done
 
 Goal:
 Show git diff for changed files.
@@ -464,7 +464,7 @@ Acceptance Criteria:
 
 ### TASK-0803: Create Branch and Commit
 
-Status: backlog
+Status: done
 
 Goal:
 Support basic branch and commit workflow.
