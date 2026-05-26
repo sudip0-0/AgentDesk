@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  createTerminalRequestSchema,
   parseIpcPayload,
   terminalKillRequestSchema,
   terminalWriteRequestSchema
 } from "./terminalValidation.js";
 
 describe("terminalValidation", () => {
+  it("requires a project id when creating a terminal", () => {
+    const result = parseIpcPayload(createTerminalRequestSchema, {
+      cwd: "."
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects invalid write payloads", () => {
     const result = parseIpcPayload(terminalWriteRequestSchema, {
       id: "not-a-uuid",

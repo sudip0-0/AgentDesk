@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { DatabaseHealth } from "../../shared/dbTypes";
-import type { OpenProjectResult, ProjectSummary } from "../../shared/projectTypes";
+import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../shared/projectTypes";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { Badge } from "./components/ui/Badge";
 import { Button } from "./components/ui/Button";
@@ -23,6 +23,8 @@ export function App(): React.JSX.Element {
   const [dbHealth, setDbHealth] = useState<DatabaseHealth | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [overview, setOverview] = useState<ProjectOverview | null>(null);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
   const [projectMessage, setProjectMessage] = useState<string | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [isOpeningProject, setIsOpeningProject] = useState(false);
@@ -64,6 +66,34 @@ export function App(): React.JSX.Element {
         setProjectError(error instanceof Error ? error.message : "Failed to load projects.");
       });
   }, []);
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setOverview(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void window.agentdesk.projects
+      .getOverview(activeProjectId)
+      .then((data: ProjectOverview) => {
+        if (!cancelled) {
+          setOverview(data);
+          setOverviewError(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setOverview(null);
+          setOverviewError(error instanceof Error ? error.message : "Failed to load project overview.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProjectId]);
 
   const openProjectFolder = async (): Promise<void> => {
     setIsOpeningProject(true);
@@ -174,7 +204,7 @@ export function App(): React.JSX.Element {
                 ))}
               </div>
 
-              <ProjectOverview project={activeProject} />
+              <ProjectOverviewPanel error={overviewError} overview={overview} />
             </section>
           ) : null}
 
@@ -216,16 +246,32 @@ export function App(): React.JSX.Element {
   );
 }
 
-function ProjectOverview({ project }: { project: ProjectSummary | null }): React.JSX.Element {
-  if (!project) {
+function ProjectOverviewPanel({
+  overview,
+  error
+}: {
+  overview: ProjectOverview | null;
+  error: string | null;
+}): React.JSX.Element {
+  if (error) {
     return (
-      <Card className="border-dashed">
+      <Card className="border-danger/45">
         <CardTitle>Project Overview</CardTitle>
-        <CardDescription>No project selected.</CardDescription>
+        <CardDescription>{error}</CardDescription>
       </Card>
     );
   }
 
+  if (!overview) {
+    return (
+      <Card className="border-dashed">
+        <CardTitle>Project Overview</CardTitle>
+        <CardDescription>Select a project to load workspace details.</CardDescription>
+      </Card>
+    );
+  }
+
+  const { project, taskSummary, recentRuns, nextTask } = overview;
   const scripts = project.metadata.scripts;
 
   return (
@@ -257,8 +303,10 @@ function ProjectOverview({ project }: { project: ProjectSummary | null }): React
         </Card>
         <Card>
           <Badge className="mb-2">Tasks</Badge>
-          <CardTitle>Backlog ready</CardTitle>
-          <CardDescription>Task summary is planned for Phase 3.</CardDescription>
+          <CardTitle>{taskSummary.total} total</CardTitle>
+          <CardDescription>
+            {taskSummary.ready} ready · {taskSummary.running} running · {taskSummary.done} done
+          </CardDescription>
         </Card>
       </section>
 
@@ -284,13 +332,42 @@ function ProjectOverview({ project }: { project: ProjectSummary | null }): React
 
         <Card>
           <CardTitle>Recent Runs</CardTitle>
-          <CardDescription>No runs recorded for this project yet.</CardDescription>
+          {recentRuns.length > 0 ? (
+            <div className="mt-3 grid gap-2">
+              {recentRuns.map((run) => (
+                <div
+                  className="grid gap-1 rounded-md border border-border bg-[#10161d] px-3 py-2"
+                  key={run.id}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-text">{run.command}</span>
+                    <Badge variant={run.status === "completed" ? "success" : "default"}>{run.status}</Badge>
+                  </div>
+                  <span className="text-xs text-muted">{run.startedAt}</span>
+                  {run.summary ? <span className="text-xs text-muted">{run.summary}</span> : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <CardDescription>No runs recorded for this project yet.</CardDescription>
+          )}
         </Card>
       </section>
 
       <Card>
         <CardTitle>Next Recommended Task</CardTitle>
-        <CardDescription>Create task records and wire them to this workspace in Phase 3.</CardDescription>
+        {nextTask ? (
+          <div className="mt-2">
+            <span className="text-sm font-bold text-text">{nextTask.title}</span>
+            <CardDescription>Status: {nextTask.status}</CardDescription>
+          </div>
+        ) : (
+          <CardDescription>
+            {taskSummary.total > 0
+              ? "No ready or backlog tasks found. Review tasks in Phase 3."
+              : "Create tasks in Phase 3 to get recommendations here."}
+          </CardDescription>
+        )}
       </Card>
     </section>
   );

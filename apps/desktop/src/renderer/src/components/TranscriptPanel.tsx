@@ -7,12 +7,18 @@ import { Dialog } from "./ui/Dialog";
 const CHUNK_PAGE_SIZE = 30;
 
 interface TranscriptPanelProps {
+  projectId: string | null;
   runId: string | null;
   open: boolean;
   onClose: () => void;
 }
 
-export function TranscriptPanel({ runId, open, onClose }: TranscriptPanelProps): React.JSX.Element | null {
+export function TranscriptPanel({
+  projectId,
+  runId,
+  open,
+  onClose
+}: TranscriptPanelProps): React.JSX.Element | null {
   const [text, setText] = useState("");
   const [chunkCount, setChunkCount] = useState(0);
   const [characterCount, setCharacterCount] = useState(0);
@@ -22,7 +28,7 @@ export function TranscriptPanel({ runId, open, onClose }: TranscriptPanelProps):
   const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   const loadMore = useCallback(async () => {
-    if (!runId) {
+    if (!runId || !projectId) {
       return;
     }
 
@@ -32,6 +38,7 @@ export function TranscriptPanel({ runId, open, onClose }: TranscriptPanelProps):
     try {
       const chunks = await window.agentdesk.runs.listLogChunks({
         runId,
+        projectId,
         offset: loadedChunks,
         limit: CHUNK_PAGE_SIZE
       });
@@ -47,10 +54,10 @@ export function TranscriptPanel({ runId, open, onClose }: TranscriptPanelProps):
     } finally {
       setLoading(false);
     }
-  }, [loadedChunks, runId]);
+  }, [loadedChunks, projectId, runId]);
 
   useEffect(() => {
-    if (!open || !runId) {
+    if (!open || !runId || !projectId) {
       return;
     }
 
@@ -64,7 +71,7 @@ export function TranscriptPanel({ runId, open, onClose }: TranscriptPanelProps):
       setError(null);
 
       try {
-        const meta = await window.agentdesk.runs.getLogMeta(runId);
+        const meta = await window.agentdesk.runs.getLogMeta({ runId, projectId });
 
         if (cancelled) {
           return;
@@ -75,6 +82,7 @@ export function TranscriptPanel({ runId, open, onClose }: TranscriptPanelProps):
 
         const chunks = await window.agentdesk.runs.listLogChunks({
           runId,
+          projectId,
           offset: 0,
           limit: CHUNK_PAGE_SIZE
         });
@@ -101,15 +109,15 @@ export function TranscriptPanel({ runId, open, onClose }: TranscriptPanelProps):
     return () => {
       cancelled = true;
     };
-  }, [open, runId]);
+  }, [open, projectId, runId]);
 
   const handleExport = async (): Promise<void> => {
-    if (!runId) {
+    if (!runId || !projectId) {
       return;
     }
 
     try {
-      const result = await window.agentdesk.runs.exportLog(runId);
+      const result = await window.agentdesk.runs.exportLog({ runId, projectId });
 
       if (result.exported && result.filePath) {
         setExportMessage(`Exported to ${result.filePath}`);
@@ -148,7 +156,7 @@ export function TranscriptPanel({ runId, open, onClose }: TranscriptPanelProps):
         <Button disabled={!hasMore || loading} onClick={() => void loadMore()} variant="secondary">
           Load more
         </Button>
-        <Button disabled={!runId || !text} onClick={() => void handleExport()} variant="primary">
+        <Button disabled={!runId || !projectId || !text} onClick={() => void handleExport()} variant="primary">
           Export transcript
         </Button>
       </div>

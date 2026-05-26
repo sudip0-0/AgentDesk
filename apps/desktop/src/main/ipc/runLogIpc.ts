@@ -1,19 +1,19 @@
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from "electron";
 import { writeFileSync } from "node:fs";
 import { z } from "zod";
-import { getAgentRun } from "../db/repositories/agentRunRepository.js";
+import { assertRunBelongsToProject } from "../db/repositories/agentRunRepository.js";
 import {
   buildTranscript,
   getTerminalLogMeta,
   listTerminalLogChunks
 } from "../db/repositories/terminalLogRepository.js";
 
-const runIdSchema = z.object({
-  runId: z.string().uuid()
+const runLogRequestSchema = z.object({
+  runId: z.string().uuid(),
+  projectId: z.string().uuid()
 });
 
-const listChunksSchema = z.object({
-  runId: z.string().uuid(),
+const listChunksSchema = runLogRequestSchema.extend({
   offset: z.number().int().min(0).default(0),
   limit: z.number().int().min(1).max(200).default(40)
 });
@@ -34,23 +34,15 @@ const parsePayload = <T>(
   return { success: true, data: result.data };
 };
 
-const assertRunExists = (runId: string): void => {
-  const run = getAgentRun(runId);
-
-  if (!run) {
-    throw new Error("Agent run was not found.");
-  }
-};
-
 export const registerRunLogIpc = (): void => {
   ipcMain.handle("runs:log-meta", (_event, payload: unknown) => {
-    const parsed = parsePayload(runIdSchema, payload);
+    const parsed = parsePayload(runLogRequestSchema, payload);
 
     if (!parsed.success) {
       throw new Error(parsed.message);
     }
 
-    assertRunExists(parsed.data.runId);
+    assertRunBelongsToProject(parsed.data.runId, parsed.data.projectId);
     return getTerminalLogMeta(parsed.data.runId);
   });
 
@@ -61,20 +53,20 @@ export const registerRunLogIpc = (): void => {
       throw new Error(parsed.message);
     }
 
-    assertRunExists(parsed.data.runId);
+    assertRunBelongsToProject(parsed.data.runId, parsed.data.projectId);
     return listTerminalLogChunks(parsed.data.runId, parsed.data.offset, parsed.data.limit);
   });
 
   ipcMain.handle(
     "runs:export-log",
     async (event: IpcMainInvokeEvent, payload: unknown) => {
-      const parsed = parsePayload(runIdSchema, payload);
+      const parsed = parsePayload(runLogRequestSchema, payload);
 
       if (!parsed.success) {
         throw new Error(parsed.message);
       }
 
-      assertRunExists(parsed.data.runId);
+      assertRunBelongsToProject(parsed.data.runId, parsed.data.projectId);
 
       const window = BrowserWindow.fromWebContents(event.sender);
 

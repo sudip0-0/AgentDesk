@@ -45,7 +45,8 @@ AgentDesk MVP is a Windows desktop app that can:
 
 - Completed TASK-0201: native Electron project folder picker with duplicate-safe SQLite persistence.
 - Completed TASK-0202: project metadata detection for package.json, package manager, scripts, git repo, and branch.
-- Completed TASK-0203: project overview screen with metadata, task/run placeholders, and selected-project terminal scoping.
+- Completed TASK-0203: project overview screen with live task summary, recent runs, next-task hint, and selected-project terminal scoping.
+- Linked agent runs and transcript access to the selected project id with validated IPC.
 
 ### Product Discovery
 

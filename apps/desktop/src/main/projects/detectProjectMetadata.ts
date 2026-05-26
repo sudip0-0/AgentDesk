@@ -72,7 +72,15 @@ const readCurrentBranch = (projectPath: string): string | null => {
     const head = readFileSync(headPath, "utf8").trim();
     const prefix = "ref: refs/heads/";
 
-    return head.startsWith(prefix) ? head.slice(prefix.length) : null;
+    if (head.startsWith(prefix)) {
+      return head.slice(prefix.length);
+    }
+
+    if (head.length > 0) {
+      return `detached (${head.slice(0, 7)})`;
+    }
+
+    return null;
   } catch {
     return null;
   }

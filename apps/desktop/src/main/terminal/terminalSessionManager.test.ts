@@ -1,4 +1,7 @@
 import type { WebContents } from "electron";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, expect, it, vi } from "vitest";
 import type { TerminalLogWriter } from "../db/terminalLogWriter.js";
 import { TerminalSessionManager } from "./terminalSessionManager.js";
@@ -59,7 +62,10 @@ describe("TerminalSessionManager", () => {
       }
     } as WebContents;
 
-    const session = manager.create({ cwd: process.cwd(), cols: 80, rows: 24 }, webContents);
+    const session = manager.create(
+      { projectId: "test-project", cwd: process.cwd(), cols: 80, rows: 24 },
+      webContents
+    );
     const command =
       process.platform === "win32"
         ? "Write-Output AGENTDESK_TERMINAL_READY; exit\r"
@@ -78,7 +84,9 @@ describe("TerminalSessionManager", () => {
 
     expect(session.cwd).toBe(process.cwd());
     expect(session.runId).toBe("run-test-id");
-    expect(logWriter.startSession).toHaveBeenCalled();
+    expect(logWriter.startSession).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: "test-project" })
+    );
     expect(logWriter.appendOutput).toHaveBeenCalled();
     expect(logWriter.endSession).toHaveBeenCalled();
     expect(events.some((event) => event.channel === "terminal:data")).toBe(true);
@@ -98,13 +106,34 @@ describe("TerminalSessionManager", () => {
       send: () => undefined
     } as unknown as WebContents;
 
-    const session = manager.create({ cwd: process.cwd(), cols: 80, rows: 24 }, owner);
+    const session = manager.create(
+      { projectId: "test-project", cwd: process.cwd(), cols: 80, rows: 24 },
+      owner
+    );
 
     expect(() => manager.write({ id: session.id, data: "\r" }, other)).toThrow(
       /not found/i
     );
 
     manager.kill(session.id, owner);
+  });
+
+  it("rejects working directories outside the project root", () => {
+    const manager = createManager();
+    const webContents = {
+      id: 4,
+      isDestroyed: () => false,
+      send: () => undefined
+    } as unknown as WebContents;
+    const outsideDirectory = join(tmpdir(), `agentdesk-outside-${Date.now()}`);
+    mkdirSync(outsideDirectory, { recursive: true });
+
+    expect(() =>
+      manager.create(
+        { projectId: "test-project", cwd: outsideDirectory, cols: 80, rows: 24 },
+        webContents
+      )
+    ).toThrow(/inside the selected project/i);
   });
 
   it("tracks active sessions and kills all", async () => {
@@ -117,7 +146,10 @@ describe("TerminalSessionManager", () => {
 
     expect(manager.hasActiveSessions()).toBe(false);
 
-    const session = manager.create({ cwd: process.cwd(), cols: 80, rows: 24 }, webContents);
+    const session = manager.create(
+      { projectId: "test-project", cwd: process.cwd(), cols: 80, rows: 24 },
+      webContents
+    );
     expect(manager.hasActiveSessions()).toBe(true);
 
     manager.kill(session.id, webContents);

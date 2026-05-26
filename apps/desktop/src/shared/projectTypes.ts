@@ -1,5 +1,14 @@
 export type PackageManager = "npm" | "pnpm" | "yarn" | "bun" | "unknown";
 
+export type TaskStatus =
+  | "backlog"
+  | "ready"
+  | "running"
+  | "needs_review"
+  | "failed"
+  | "blocked"
+  | "done";
+
 export interface ProjectScript {
   name: string;
   command: string;
@@ -25,4 +34,38 @@ export interface ProjectSummary {
 export interface OpenProjectResult {
   project: ProjectSummary;
   duplicate: boolean;
+}
+
+export interface TaskStatusSummary {
+  backlog: number;
+  ready: number;
+  running: number;
+  needs_review: number;
+  failed: number;
+  blocked: number;
+  done: number;
+  total: number;
+}
+
+export interface AgentRunSummary {
+  id: string;
+  command: string;
+  status: string;
+  startedAt: string;
+  finishedAt: string | null;
+  exitCode: number | null;
+  summary: string | null;
+}
+
+export interface NextTaskSummary {
+  id: string;
+  title: string;
+  status: TaskStatus;
+}
+
+export interface ProjectOverview {
+  project: ProjectSummary;
+  taskSummary: TaskStatusSummary;
+  recentRuns: AgentRunSummary[];
+  nextTask: NextTaskSummary | null;
 }

@@ -308,7 +308,7 @@ export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Elemen
   };
 
   const startTerminal = async (): Promise<void> => {
-    if (!activeTab || activeTab.sessionId || activeTab.status === "starting") {
+    if (!activeTab || !project || activeTab.sessionId || activeTab.status === "starting") {
       return;
     }
 
@@ -320,7 +320,7 @@ export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Elemen
 
     try {
       const result = await window.agentdesk.terminals.create({
-        projectId: project?.id,
+        projectId: project.id,
         cwd,
         shell,
         cols: size.cols,
@@ -541,6 +541,7 @@ export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Elemen
       <TranscriptPanel
         onClose={() => setTranscriptOpen(false)}
         open={transcriptOpen}
+        projectId={project?.id ?? null}
         runId={activeTab?.runId ?? null}
       />
     </section>

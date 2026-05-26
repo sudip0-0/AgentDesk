@@ -3,7 +3,7 @@ import { z } from "zod";
 const terminalSizeSchema = z.number().int().min(1).max(500);
 
 export const createTerminalRequestSchema = z.object({
-  projectId: z.string().min(1).max(128).optional(),
+  projectId: z.string().uuid(),
   cwd: z.string().max(4096).optional(),
   cols: terminalSizeSchema.optional(),
   rows: terminalSizeSchema.optional(),

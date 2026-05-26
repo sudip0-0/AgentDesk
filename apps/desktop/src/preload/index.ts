@@ -11,10 +11,11 @@ import type {
   TerminalWriteRequest
 } from "../shared/terminalTypes.js";
 import type { DatabaseHealth } from "../shared/dbTypes.js";
-import type { OpenProjectResult, ProjectSummary } from "../shared/projectTypes.js";
+import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../shared/projectTypes.js";
 import type {
   ExportTerminalLogResult,
   ListTerminalLogChunksRequest,
+  RunLogRequest,
   TerminalLogChunk,
   TerminalLogMeta
 } from "../shared/runLogTypes.js";
@@ -51,15 +52,17 @@ const agentdeskApi: AgentDeskApi = {
     list: (): Promise<ProjectSummary[]> =>
       ipcRenderer.invoke("project:list") as Promise<ProjectSummary[]>,
     openFolder: (): Promise<OpenProjectResult | null> =>
-      ipcRenderer.invoke("project:open-folder") as Promise<OpenProjectResult | null>
+      ipcRenderer.invoke("project:open-folder") as Promise<OpenProjectResult | null>,
+    getOverview: (projectId: string): Promise<ProjectOverview> =>
+      ipcRenderer.invoke("project:get-overview", { projectId }) as Promise<ProjectOverview>
   },
   runs: {
-    getLogMeta: (runId: string): Promise<TerminalLogMeta> =>
-      ipcRenderer.invoke("runs:log-meta", { runId }) as Promise<TerminalLogMeta>,
+    getLogMeta: (request: RunLogRequest): Promise<TerminalLogMeta> =>
+      ipcRenderer.invoke("runs:log-meta", request) as Promise<TerminalLogMeta>,
     listLogChunks: (request: ListTerminalLogChunksRequest): Promise<TerminalLogChunk[]> =>
       ipcRenderer.invoke("runs:log-chunks", request) as Promise<TerminalLogChunk[]>,
-    exportLog: (runId: string): Promise<ExportTerminalLogResult> =>
-      ipcRenderer.invoke("runs:export-log", { runId }) as Promise<ExportTerminalLogResult>
+    exportLog: (request: RunLogRequest): Promise<ExportTerminalLogResult> =>
+      ipcRenderer.invoke("runs:export-log", request) as Promise<ExportTerminalLogResult>
   },
   terminals: {
     create: (request: CreateTerminalRequest): Promise<CreateTerminalResult> =>

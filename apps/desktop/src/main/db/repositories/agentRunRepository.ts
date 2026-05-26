@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { DEFAULT_PROJECT_ID } from "../constants.js";
 import { getDatabase } from "../client.js";
 import { agentRuns } from "../schema.js";
 
 export type AgentRunStatus = "running" | "completed" | "failed" | "killed";
 
 export interface StartAgentRunInput {
+  projectId: string;
   terminalSessionId: string;
   command: string;
   cwd: string;
@@ -19,7 +19,7 @@ export const startAgentRun = (input: StartAgentRunInput): string => {
 
   database.insert(agentRuns).values({
     id,
-    projectId: DEFAULT_PROJECT_ID,
+    projectId: input.projectId,
     terminalSessionId: input.terminalSessionId,
     command: input.command,
     status: "running",
@@ -51,4 +51,12 @@ export const finishAgentRun = (
 export const getAgentRun = (runId: string) => {
   const database = getDatabase();
   return database.select().from(agentRuns).where(eq(agentRuns.id, runId)).get();
+};
+
+export const assertRunBelongsToProject = (runId: string, projectId: string): void => {
+  const run = getAgentRun(runId);
+
+  if (!run || run.projectId !== projectId) {
+    throw new Error("Agent run was not found for this project.");
+  }
 };

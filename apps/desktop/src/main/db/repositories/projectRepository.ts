@@ -1,19 +1,43 @@
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
 import { eq } from "drizzle-orm";
-import type { OpenProjectResult, ProjectSummary } from "../../../shared/projectTypes.js";
+import type {
+  OpenProjectResult,
+  PackageManager,
+  ProjectMetadata,
+  ProjectSummary
+} from "../../../shared/projectTypes.js";
 import { detectProjectMetadata } from "../../projects/detectProjectMetadata.js";
 import { normalizeProjectPath } from "../../projects/projectPaths.js";
+import { DEFAULT_PROJECT_ID } from "../constants.js";
 import { getDatabase } from "../client.js";
 import { projects } from "../schema.js";
 
-const toProjectSummary = (project: typeof projects.$inferSelect): ProjectSummary => ({
+const isUserProject = (project: typeof projects.$inferSelect): boolean =>
+  project.id !== DEFAULT_PROJECT_ID && !project.path.startsWith("probe://");
+
+const metadataFromStoredProject = (project: typeof projects.$inferSelect): ProjectMetadata => {
+  const packageManager = (project.packageManager as PackageManager | null) ?? "unknown";
+
+  return {
+    hasPackageJson: project.techStack === "node",
+    packageManager,
+    scripts: [],
+    isGitRepo: project.defaultBranch !== null,
+    currentBranch: project.defaultBranch
+  };
+};
+
+const toProjectSummary = (
+  project: typeof projects.$inferSelect,
+  metadata?: ProjectMetadata
+): ProjectSummary => ({
   id: project.id,
   name: project.name,
   path: project.path,
   createdAt: project.createdAt,
   updatedAt: project.updatedAt,
-  metadata: detectProjectMetadata(project.path)
+  metadata: metadata ?? metadataFromStoredProject(project)
 });
 
 export const listProjects = (): ProjectSummary[] => {
@@ -23,15 +47,32 @@ export const listProjects = (): ProjectSummary[] => {
     .select()
     .from(projects)
     .all()
-    .filter((project) => project.id !== "default-project" && !project.path.startsWith("probe://"))
-    .map(toProjectSummary);
+    .filter(isUserProject)
+    .map((project) => toProjectSummary(project));
 };
 
 export const getProjectById = (projectId: string): ProjectSummary | null => {
   const database = getDatabase();
   const project = database.select().from(projects).where(eq(projects.id, projectId)).get();
 
-  return project ? toProjectSummary(project) : null;
+  if (!project || !isUserProject(project)) {
+    return null;
+  }
+
+  return toProjectSummary(project);
+};
+
+export const getProjectWithFreshMetadata = (projectId: string): ProjectSummary | null => {
+  const project = getProjectById(projectId);
+
+  if (!project) {
+    return null;
+  }
+
+  return {
+    ...project,
+    metadata: detectProjectMetadata(project.path)
+  };
 };
 
 export const openProjectFromPath = (folderPath: string): OpenProjectResult => {
@@ -41,7 +82,7 @@ export const openProjectFromPath = (folderPath: string): OpenProjectResult => {
   const metadata = detectProjectMetadata(normalizedPath);
   const now = new Date().toISOString();
 
-  if (existing) {
+  if (existing && isUserProject(existing)) {
     database
       .update(projects)
       .set({
@@ -54,7 +95,10 @@ export const openProjectFromPath = (folderPath: string): OpenProjectResult => {
       .run();
 
     return {
-      project: getProjectById(existing.id) ?? toProjectSummary(existing),
+      project: {
+        ...toProjectSummary(existing, metadata),
+        metadata
+      },
       duplicate: true
     };
   }
@@ -74,7 +118,7 @@ export const openProjectFromPath = (folderPath: string): OpenProjectResult => {
   database.insert(projects).values(project).run();
 
   return {
-    project: toProjectSummary(project),
+    project: toProjectSummary(project, metadata),
     duplicate: false
   };
 };

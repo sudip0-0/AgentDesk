@@ -2,7 +2,7 @@ import type { WebContents } from "electron";
 import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
 import type { AgentRunStatus } from "../db/repositories/agentRunRepository.js";
-import { getProjectById, listProjects } from "../db/repositories/projectRepository.js";
+import { getProjectById } from "../db/repositories/projectRepository.js";
 import type { TerminalLogWriter } from "../db/terminalLogWriter.js";
 import { isPathInsideRoot } from "../projects/projectPaths.js";
 import { redactSecrets } from "./logRedaction.js";
@@ -27,9 +27,7 @@ interface TerminalSession {
 type ProjectResolver = (projectId?: string) => ProjectSummary | null;
 
 const resolveProjectFromDatabase: ProjectResolver = (projectId) =>
-  (projectId ? getProjectById(projectId) : null) ??
-  listProjects().find((entry) => entry.id !== "default-project") ??
-  null;
+  projectId ? getProjectById(projectId) : null;
 
 export class TerminalSessionManager {
   private readonly sessions = new Map<string, TerminalSession>();
@@ -47,10 +45,14 @@ export class TerminalSessionManager {
     request: CreateTerminalRequest,
     webContents: WebContents
   ): CreateTerminalResult {
+    if (!request.projectId) {
+      throw new Error("A project id is required to start a terminal.");
+    }
+
     const project = this.resolveProject(request.projectId);
 
     if (!project) {
-      throw new Error("Open a project before starting a terminal.");
+      throw new Error("Selected project was not found.");
     }
 
     const cwd = resolveTerminalCwd(request.cwd, project.path);
@@ -63,6 +65,7 @@ export class TerminalSessionManager {
     const shell = resolveShell(request.shell);
     const id = randomUUID();
     const agentRunId = this.logWriter.startSession({
+      projectId: project.id,
       terminalSessionId: id,
       command: shell,
       cwd

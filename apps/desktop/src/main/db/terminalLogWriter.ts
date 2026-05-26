@@ -14,11 +14,13 @@ export class TerminalLogWriter {
   private readonly buffers = new Map<string, LogBuffer>();
 
   public startSession(input: {
+    projectId: string;
     terminalSessionId: string;
     command: string;
     cwd: string;
   }): string {
     return startAgentRun({
+      projectId: input.projectId,
       terminalSessionId: input.terminalSessionId,
       command: input.command,
       cwd: input.cwd

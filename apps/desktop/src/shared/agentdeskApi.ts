@@ -1,8 +1,9 @@
 import type { DatabaseHealth } from "./dbTypes.js";
-import type { OpenProjectResult, ProjectSummary } from "./projectTypes.js";
+import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "./projectTypes.js";
 import type {
   ExportTerminalLogResult,
   ListTerminalLogChunksRequest,
+  RunLogRequest,
   TerminalLogChunk,
   TerminalLogMeta
 } from "./runLogTypes.js";
@@ -30,11 +31,12 @@ export interface AgentDeskApi {
   projects: {
     list: () => Promise<ProjectSummary[]>;
     openFolder: () => Promise<OpenProjectResult | null>;
+    getOverview: (projectId: string) => Promise<ProjectOverview>;
   };
   runs: {
-    getLogMeta: (runId: string) => Promise<TerminalLogMeta>;
+    getLogMeta: (request: RunLogRequest) => Promise<TerminalLogMeta>;
     listLogChunks: (request: ListTerminalLogChunksRequest) => Promise<TerminalLogChunk[]>;
-    exportLog: (runId: string) => Promise<ExportTerminalLogResult>;
+    exportLog: (request: RunLogRequest) => Promise<ExportTerminalLogResult>;
   };
   terminals: {
     create: (request: CreateTerminalRequest) => Promise<CreateTerminalResult>;

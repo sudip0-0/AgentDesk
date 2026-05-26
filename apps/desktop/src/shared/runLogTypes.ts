@@ -10,8 +10,12 @@ export interface TerminalLogMeta {
   characterCount: number;
 }
 
-export interface ListTerminalLogChunksRequest {
+export interface RunLogRequest {
   runId: string;
+  projectId: string;
+}
+
+export interface ListTerminalLogChunksRequest extends RunLogRequest {
   offset?: number;
   limit?: number;
 }

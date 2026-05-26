@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import { checkDatabaseHealth } from "./health.js";
 import { runMigrations } from "./migrate.js";
 import { setDatabasePathForTests } from "./paths.js";
 import { ensureDefaultProject } from "./seed.js";
+import { openProjectFromPath } from "./repositories/projectRepository.js";
 import { startAgentRun, finishAgentRun } from "./repositories/agentRunRepository.js";
 import {
   appendTerminalLogChunk,
@@ -49,10 +50,15 @@ describe("database", () => {
     expect(health.ok).toBe(true);
 
     ensureDefaultProject();
+    const projectDirectory = join(databaseDirectory, "probe-project");
+    mkdirSync(projectDirectory, { recursive: true });
+    const { project } = openProjectFromPath(projectDirectory);
+
     const runId = startAgentRun({
+      projectId: project.id,
       terminalSessionId: "session-1",
       command: "powershell.exe",
-      cwd: databaseDirectory
+      cwd: projectDirectory
     });
 
     appendTerminalLogChunk(runId, "line-one\n");

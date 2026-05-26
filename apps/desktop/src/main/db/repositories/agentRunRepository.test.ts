@@ -1,0 +1,57 @@
+import { mkdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { closeDatabase } from "../client.js";
+import { setDatabasePathForTests } from "../paths.js";
+import { openProjectFromPath } from "./projectRepository.js";
+import {
+  assertRunBelongsToProject,
+  getAgentRun,
+  startAgentRun
+} from "./agentRunRepository.js";
+
+const resetDatabase = (): void => {
+  closeDatabase();
+  setDatabasePathForTests(null);
+};
+
+describe("agentRunRepository", () => {
+  let databaseDirectory = "";
+
+  beforeEach(() => {
+    databaseDirectory = join(tmpdir(), `agentdesk-runs-${Date.now()}`);
+    mkdirSync(databaseDirectory, { recursive: true });
+    setDatabasePathForTests(join(databaseDirectory, "agentdesk.db"));
+  });
+
+  afterEach(() => {
+    resetDatabase();
+    rmSync(databaseDirectory, { recursive: true, force: true });
+  });
+
+  it("stores runs under the selected project and enforces project ownership", () => {
+    const projectDirectory = join(databaseDirectory, "repo");
+    mkdirSync(projectDirectory, { recursive: true });
+
+    const { project: firstProject } = openProjectFromPath(projectDirectory);
+    const otherDirectory = join(databaseDirectory, "other");
+    mkdirSync(otherDirectory, { recursive: true });
+    const { project: otherProject } = openProjectFromPath(otherDirectory);
+
+    const runId = startAgentRun({
+      projectId: firstProject.id,
+      terminalSessionId: "session-1",
+      command: "powershell.exe",
+      cwd: projectDirectory
+    });
+
+    const run = getAgentRun(runId);
+    expect(run?.projectId).toBe(firstProject.id);
+
+    assertRunBelongsToProject(runId, firstProject.id);
+    expect(() => assertRunBelongsToProject(runId, otherProject.id)).toThrow(
+      /not found for this project/i
+    );
+  });
+});
