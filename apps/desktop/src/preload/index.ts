@@ -20,6 +20,16 @@ import type {
 import type { DatabaseHealth } from "../shared/dbTypes.js";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../shared/projectTypes.js";
 import type {
+  CreateFixTaskInput,
+  ListQualityChecksInput,
+  QualityCheckRecord,
+  QualityCommandDeleteInput,
+  QualityCommandInput,
+  QualityCommandRecord,
+  QualityCommandUpdateInput,
+  RunQualityChecksInput
+} from "../shared/qualityTypes.js";
+import type {
   ExportTerminalLogResult,
   ListTerminalLogChunksRequest,
   RunLogRequest,
@@ -58,7 +68,7 @@ const subscribe = <T>(
 const agentdeskApi: AgentDeskApi = {
   app: {
     getName: (): string => "AgentDesk",
-    getPhase: (): string => "Agent Profiles"
+    getPhase: (): string => "Quality Checks"
   },
   db: {
     getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>
@@ -100,6 +110,22 @@ const agentdeskApi: AgentDeskApi = {
       ipcRenderer.invoke("runs:log-chunks", request) as Promise<TerminalLogChunk[]>,
     exportLog: (request: RunLogRequest): Promise<ExportTerminalLogResult> =>
       ipcRenderer.invoke("runs:export-log", request) as Promise<ExportTerminalLogResult>
+  },
+  quality: {
+    listCommands: (projectId: string): Promise<QualityCommandRecord[]> =>
+      ipcRenderer.invoke("quality:list-commands", { projectId }) as Promise<QualityCommandRecord[]>,
+    createCommand: (input: QualityCommandInput): Promise<QualityCommandRecord> =>
+      ipcRenderer.invoke("quality:create-command", input) as Promise<QualityCommandRecord>,
+    updateCommand: (input: QualityCommandUpdateInput): Promise<QualityCommandRecord> =>
+      ipcRenderer.invoke("quality:update-command", input) as Promise<QualityCommandRecord>,
+    deleteCommand: (input: QualityCommandDeleteInput): Promise<void> =>
+      ipcRenderer.invoke("quality:delete-command", input) as Promise<void>,
+    run: (input: RunQualityChecksInput): Promise<QualityCheckRecord[]> =>
+      ipcRenderer.invoke("quality:run", input) as Promise<QualityCheckRecord[]>,
+    listChecks: (input: ListQualityChecksInput): Promise<QualityCheckRecord[]> =>
+      ipcRenderer.invoke("quality:list-checks", input) as Promise<QualityCheckRecord[]>,
+    createFixTask: (input: CreateFixTaskInput): Promise<unknown> =>
+      ipcRenderer.invoke("quality:create-fix-task", input) as Promise<unknown>
   },
   terminals: {
     create: (request: CreateTerminalRequest): Promise<CreateTerminalResult> =>

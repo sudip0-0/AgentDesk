@@ -6,6 +6,7 @@ import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../s
 import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
 import type { TaskRecord } from "../../shared/taskTypes";
 import { AgentProfilesPanel } from "./components/AgentProfilesPanel";
+import { QualityPanel } from "./components/QualityPanel";
 import { TaskBoard } from "./components/TaskBoard";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { Badge } from "./components/ui/Badge";
@@ -19,6 +20,7 @@ const navItems = [
   { id: "terminal", label: "Terminal" },
   { id: "tasks", label: "Tasks" },
   { id: "agents", label: "Agents" },
+  { id: "quality", label: "Quality" },
   { id: "runs", label: "Runs" },
   { id: "settings", label: "Settings" }
 ];
@@ -157,7 +159,7 @@ export function App(): React.JSX.Element {
       <div className="grid min-w-0 grid-rows-[auto_1fr]">
         <header className="flex items-center justify-between gap-4 border-b border-border bg-[#151b22] px-6 py-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 6</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 7</span>
             <h1 className="mt-1 text-xl font-bold text-text">{phase}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -270,6 +272,10 @@ export function App(): React.JSX.Element {
 
           {activeNav === "agents" ? <AgentProfilesPanel /> : null}
 
+          {activeNav === "quality" ? (
+            <QualityPanel onFixTaskCreated={refreshOverview} project={activeProject} />
+          ) : null}
+
           <section className="grid gap-3 md:grid-cols-3">
             <Card>
               <Badge className="mb-2">Main</Badge>
@@ -294,7 +300,11 @@ export function App(): React.JSX.Element {
             </Card>
           </section>
 
-          {activeNav !== "terminal" && activeNav !== "projects" && activeNav !== "tasks" && activeNav !== "agents" ? (
+          {activeNav !== "terminal" &&
+          activeNav !== "projects" &&
+          activeNav !== "tasks" &&
+          activeNav !== "agents" &&
+          activeNav !== "quality" ? (
             <Card className={cn("border-dashed")}>
               <CardTitle>{navItems.find((item) => item.id === activeNav)?.label}</CardTitle>
               <CardDescription>This screen is planned for a later phase.</CardDescription>

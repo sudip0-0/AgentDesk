@@ -92,4 +92,5 @@ CREATE TABLE IF NOT EXISTS quality_checks (
   FOREIGN KEY(project_id) REFERENCES projects(id),
   FOREIGN KEY(task_id) REFERENCES tasks(id)
 );
+
 `;

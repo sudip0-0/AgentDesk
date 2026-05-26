@@ -16,6 +16,13 @@ import {
   updateAgentProfile
 } from "./repositories/agentProfileRepository.js";
 import {
+  createFixTaskFromQualityCheck,
+  createQualityCommand,
+  listQualityCommands,
+  saveQualityCheck,
+  updateQualityCommand
+} from "./repositories/qualityRepository.js";
+import {
   createTask,
   deleteTask,
   listTasks,
@@ -54,7 +61,7 @@ describe("database", () => {
     runMigrations(sqlite);
 
     const rows = sqlite.prepare("SELECT id FROM schema_migrations").all() as { id: string }[];
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     sqlite.close();
   });
 
@@ -172,5 +179,51 @@ describe("database", () => {
 
     deleteAgentProfile(updated.id);
     expect(listAgentProfiles().some((profile) => profile.id === updated.id)).toBe(false);
+  });
+
+  it("configures quality commands and creates fix tasks from failed checks", () => {
+    const projectDirectory = join(databaseDirectory, "quality-project");
+    mkdirSync(projectDirectory, { recursive: true });
+    const { project } = openProjectFromPath(projectDirectory);
+
+    const defaultCommands = listQualityCommands(project.id);
+    expect(defaultCommands.map((command) => command.command)).toEqual(
+      expect.arrayContaining(["npm run lint", "npm run typecheck", "npm test", "npm run build"])
+    );
+
+    const customCommand = createQualityCommand({
+      projectId: project.id,
+      label: "Echo",
+      command: "node -e \"console.log('ok')\"",
+      required: false,
+      timeoutMs: 10_000
+    });
+
+    const updatedCommand = updateQualityCommand({
+      ...customCommand,
+      label: "Echo OK",
+      required: true
+    });
+    expect(updatedCommand.label).toBe("Echo OK");
+    expect(updatedCommand.required).toBe(true);
+
+    const failedCheck = saveQualityCheck({
+      projectId: project.id,
+      label: "Typecheck",
+      command: "npm run typecheck",
+      status: "failed",
+      output: "Type error",
+      exitCode: 2,
+      startedAt: new Date(0).toISOString(),
+      finishedAt: new Date(1).toISOString()
+    });
+
+    const fixTask = createFixTaskFromQualityCheck({
+      projectId: project.id,
+      qualityCheckId: failedCheck.id
+    });
+
+    expect(fixTask.title).toContain("Fix quality check");
+    expect(fixTask.context).toContain("Type error");
   });
 });

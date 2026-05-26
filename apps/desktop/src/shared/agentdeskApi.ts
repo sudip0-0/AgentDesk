@@ -7,6 +7,16 @@ import type {
 } from "./agentProfileTypes.js";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "./projectTypes.js";
 import type {
+  CreateFixTaskInput,
+  ListQualityChecksInput,
+  QualityCheckRecord,
+  QualityCommandDeleteInput,
+  QualityCommandInput,
+  QualityCommandRecord,
+  QualityCommandUpdateInput,
+  RunQualityChecksInput
+} from "./qualityTypes.js";
+import type {
   ExportTerminalLogResult,
   ListTerminalLogChunksRequest,
   RunLogRequest,
@@ -64,6 +74,15 @@ export interface AgentDeskApi {
     getLogMeta: (request: RunLogRequest) => Promise<TerminalLogMeta>;
     listLogChunks: (request: ListTerminalLogChunksRequest) => Promise<TerminalLogChunk[]>;
     exportLog: (request: RunLogRequest) => Promise<ExportTerminalLogResult>;
+  };
+  quality: {
+    listCommands: (projectId: string) => Promise<QualityCommandRecord[]>;
+    createCommand: (input: QualityCommandInput) => Promise<QualityCommandRecord>;
+    updateCommand: (input: QualityCommandUpdateInput) => Promise<QualityCommandRecord>;
+    deleteCommand: (input: QualityCommandDeleteInput) => Promise<void>;
+    run: (input: RunQualityChecksInput) => Promise<QualityCheckRecord[]>;
+    listChecks: (input: ListQualityChecksInput) => Promise<QualityCheckRecord[]>;
+    createFixTask: (input: CreateFixTaskInput) => Promise<unknown>;
   };
   terminals: {
     create: (request: CreateTerminalRequest) => Promise<CreateTerminalResult>;

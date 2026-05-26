@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, Phase 5 terminal engine, and Phase 6 agent profiles are complete. Full README MVP criteria are not done yet (quality runner, git UI).
+Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, Phase 5 terminal engine, Phase 6 agent profiles, and Phase 7 quality checks are complete. Full README MVP criteria are not done yet (git UI).
 
 ## MVP Definition
 
@@ -17,7 +17,7 @@ Target MVP capabilities (see README.md):
 | Generate prompts | Done |
 | Launch CLI agents in embedded terminals | Done |
 | Save run logs | Done |
-| Run quality checks | Not started (Phase 7) |
+| Run quality checks | Done |
 | Show git status and diffs | Not started (Phase 8) |
 | Track progress locally | Partial (SQLite + overview; PROGRESS.md sync pending) |
 
@@ -74,6 +74,13 @@ Target MVP capabilities (see README.md):
 - Task status moves to **running** on launch and to **needs_review** or **failed** when the process exits.
 - Agent profiles can be created, edited, and deleted from the Agents screen.
 
+### Phase 7: Quality Checks
+
+- Completed TASK-0701: per-project quality command configuration with default Node commands.
+- Completed TASK-0702: quality runner executes commands in the project folder and stores stdout/stderr, exit code, status, and timing.
+- Completed TASK-0703: failed quality results can create follow-up fix tasks.
+- Added pass/fail/skipped result display, result detail output, and timeout enforcement per command.
+
 ### Product Discovery
 
 - Defined desktop-first direction.
@@ -115,9 +122,9 @@ None.
 
 Next focused tasks:
 
-1. TASK-0701: Configure Quality Commands.
-2. TASK-0702: Run Quality Checks.
-3. TASK-0703: Create Fix Task from Failed Check.
+1. TASK-0801: Show Git Status.
+2. TASK-0802: Add Diff Viewer.
+3. TASK-0803: Create Branch and Commit.
 
 ## Current Risks
 

@@ -382,7 +382,7 @@ Acceptance Criteria:
 
 ### TASK-0701: Configure Quality Commands
 
-Status: backlog
+Status: done
 
 Goal:
 Allow users to configure per-project quality commands.
@@ -397,7 +397,7 @@ Acceptance Criteria:
 
 ### TASK-0702: Run Quality Checks
 
-Status: backlog
+Status: done
 
 Goal:
 Run quality commands and capture results.
@@ -414,7 +414,7 @@ Acceptance Criteria:
 
 ### TASK-0703: Create Fix Task from Failed Check
 
-Status: backlog
+Status: done
 
 Goal:
 Create a follow-up task from failed checks.

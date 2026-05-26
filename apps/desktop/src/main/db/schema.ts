@@ -91,3 +91,16 @@ export const qualityChecks = sqliteTable("quality_checks", {
   startedAt: text("started_at").notNull(),
   finishedAt: text("finished_at")
 });
+
+export const qualityCommands = sqliteTable("quality_commands", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id),
+  label: text("label").notNull(),
+  command: text("command").notNull(),
+  required: integer("required").notNull().default(1),
+  timeoutMs: integer("timeout_ms"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull()
+});

@@ -5,6 +5,7 @@ import { registerAgentProfileIpc } from "./agents/agentProfileIpc.js";
 import { registerDatabaseIpc } from "./ipc/dbIpc.js";
 import { registerRunLogIpc } from "./ipc/runLogIpc.js";
 import { registerProjectIpc } from "./projects/projectIpc.js";
+import { registerQualityIpc } from "./quality/qualityIpc.js";
 import { registerTaskIpc } from "./tasks/taskIpc.js";
 import { registerTerminalIpc, terminalSessionManager } from "./terminal/terminalIpc.js";
 
@@ -81,6 +82,7 @@ app.whenReady().then(() => {
   registerDatabaseIpc();
   registerAgentProfileIpc();
   registerProjectIpc();
+  registerQualityIpc();
   registerTaskIpc();
   registerRunLogIpc();
   registerTerminalIpc();
