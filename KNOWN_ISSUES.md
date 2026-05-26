@@ -152,4 +152,5 @@ Launch fails.
 
 Mitigation:
 Add "Test Command" button for every agent profile.
-Show clear error when command not found.
+Terminal launch now surfaces spawn failures with PATH hints when the executable is missing.
+Do not store secrets in profile environment variables.

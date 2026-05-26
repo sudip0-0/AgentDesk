@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildAgentCommandPreview, parseEnvText, splitArgs } from "./agentCommandBuilder.js";
+import {
+  buildAgentCommandPreview,
+  buildAgentLaunchConfig,
+  parseEnvText,
+  splitArgs,
+  wrapAgentCommandForShell
+} from "./agentCommandBuilder.js";
 import type { AgentProfileRecord } from "./agentProfileTypes.js";
 import type { ProjectSummary } from "./projectTypes.js";
 import type { TaskRecord } from "./taskTypes.js";
@@ -77,5 +83,32 @@ describe("agent command builder", () => {
     expect(preview.displayCommand).toContain('"Launch agent"');
     expect(preview.env.OPENAI_BASE_URL).toBe("http://localhost:3000");
     expect(preview.promptWillBeSentToStdin).toBe(false);
+  });
+
+  it("wraps agent commands in the profile shell on Windows", () => {
+    const wrapped = wrapAgentCommandForShell("powershell", "codex", ["exec", "--task", "Launch agent"], "win32");
+
+    expect(wrapped.executable).toBe("powershell.exe");
+    expect(wrapped.args[0]).toBe("-NoLogo");
+    expect(wrapped.args[1]).toBe("-Command");
+    expect(wrapped.args[2]).toContain("codex");
+    expect(wrapped.args[2]).toContain("Launch agent");
+  });
+
+  it("builds launch config with shell-wrapped spawn target", () => {
+    const launchConfig = buildAgentLaunchConfig(
+      profile,
+      {
+        project,
+        task,
+        prompt: "Implement this task.",
+        cwd: project.path
+      },
+      "win32"
+    );
+
+    expect(launchConfig.spawnExecutable).toBe("powershell.exe");
+    expect(launchConfig.spawnArgs.length).toBeGreaterThan(0);
+    expect(launchConfig.displayCommand).toContain("powershell.exe");
   });
 });

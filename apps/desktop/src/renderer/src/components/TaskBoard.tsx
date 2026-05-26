@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { buildAgentCommandPreview } from "../../../shared/agentCommandBuilder";
+import { buildAgentLaunchConfig } from "../../../shared/agentCommandBuilder";
 import type { AgentProfileRecord } from "../../../shared/agentProfileTypes";
 import {
   buildPrompt,
@@ -83,6 +83,13 @@ export function TaskBoard({
     templateId: PromptTemplateId;
     prompt: string;
     label: string;
+  } | null>(null);
+  const [launchConfirmOpen, setLaunchConfirmOpen] = useState(false);
+  const [pendingLaunch, setPendingLaunch] = useState<{
+    task: TaskRecord;
+    profile: AgentProfileRecord;
+    displayCommand: string;
+    promptDelivery: string;
   } | null>(null);
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
@@ -407,17 +414,20 @@ export function TaskBoard({
           }
 
           const prompt = buildTaskPrompt(task, "implementation");
-          const preview = buildAgentCommandPreview(profile, {
+          const launchConfig = buildAgentLaunchConfig(profile, {
             project,
             task,
             prompt,
             cwd: project.path
           });
-          const confirmed = window.confirm(`Launch ${profile.name}?\n\n${preview.displayCommand}`);
 
-          if (confirmed) {
-            onLaunchInTerminal(task, profile);
-          }
+          setPendingLaunch({
+            task,
+            profile,
+            displayCommand: launchConfig.displayCommand,
+            promptDelivery: launchConfig.promptDelivery
+          });
+          setLaunchConfirmOpen(true);
         }}
         onSendPromptToTerminal={requestSendPrompt}
         onStatusChange={(taskId, status) => void changeStatus(taskId, status)}
@@ -428,6 +438,51 @@ export function TaskBoard({
         setSelectedTemplateId={setSelectedTemplateId}
         task={selectedTask}
       />
+
+      <Dialog
+        description="This starts a local terminal session with the command below. Only continue if you trust the profile configuration."
+        onClose={() => {
+          setLaunchConfirmOpen(false);
+          setPendingLaunch(null);
+        }}
+        open={launchConfirmOpen && pendingLaunch !== null}
+        title={pendingLaunch ? `Launch ${pendingLaunch.profile.name}?` : "Launch agent"}
+      >
+        <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+          {pendingLaunch?.displayCommand}
+        </pre>
+        {pendingLaunch ? (
+          <p className="mt-3 text-sm text-muted">
+            Prompt delivery: {pendingLaunch.promptDelivery}. The task will be marked Running and linked to
+            this session.
+          </p>
+        ) : null}
+        <div className="mt-4 flex justify-end gap-2 border-t border-border pt-4">
+          <Button
+            onClick={() => {
+              setLaunchConfirmOpen(false);
+              setPendingLaunch(null);
+            }}
+            variant="ghost"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (!pendingLaunch) {
+                return;
+              }
+
+              onLaunchInTerminal(pendingLaunch.task, pendingLaunch.profile);
+              setLaunchConfirmOpen(false);
+              setPendingLaunch(null);
+            }}
+            variant="primary"
+          >
+            Launch Agent
+          </Button>
+        </div>
+      </Dialog>
 
       <Dialog
         description="Long prompts are copied to the clipboard and written to the active terminal line by line. Review before confirming."
@@ -555,7 +610,7 @@ function TaskDetailPanel({
     agentProfiles.find((profile) => profile.id === selectedAgentProfileId) ?? agentProfiles[0] ?? null;
   const commandPreview =
     selectedAgentProfile
-      ? buildAgentCommandPreview(selectedAgentProfile, {
+      ? buildAgentLaunchConfig(selectedAgentProfile, {
           project,
           task,
           prompt: buildPrompt("implementation", createPromptContext(project, task)),

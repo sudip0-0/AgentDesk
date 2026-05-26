@@ -1,10 +1,12 @@
 import type {
   AgentCommandPreview,
+  AgentLaunchConfig,
   AgentProfileRecord,
   AgentPromptDelivery
 } from "./agentProfileTypes.js";
 import type { ProjectSummary } from "./projectTypes.js";
 import type { TaskRecord } from "./taskTypes.js";
+import type { TerminalShell } from "./terminalTypes.js";
 
 export const parseEnvText = (envText: string): Record<string, string> => {
   const env: Record<string, string> = {};
@@ -81,6 +83,55 @@ export const splitArgs = (argsTemplate: string): string[] => {
 const quoteCommandPart = (part: string): string =>
   /\s/.test(part) ? `"${part.split('"').join('\\"')}"` : part;
 
+const quotePowerShellArg = (part: string): string => `'${part.split("'").join("''")}'`;
+
+const formatArgvCommand = (executable: string, args: string[]): string =>
+  [executable, ...args].map(quoteCommandPart).join(" ");
+
+export const resolveShellExecutable = (
+  shell: TerminalShell,
+  platform = process.platform
+): string => {
+  if (platform !== "win32") {
+    return process.env.SHELL ?? "/bin/sh";
+  }
+
+  if (shell === "cmd") {
+    return process.env.ComSpec ?? "cmd.exe";
+  }
+
+  return "powershell.exe";
+};
+
+/** Wraps an agent executable and args so the PTY runs inside the profile shell. */
+export const wrapAgentCommandForShell = (
+  shell: TerminalShell,
+  executable: string,
+  args: string[],
+  platform = process.platform
+): { executable: string; args: string[] } => {
+  if (platform !== "win32") {
+    const shellExecutable = resolveShellExecutable(shell, platform);
+    return { executable: shellExecutable, args: ["-c", formatArgvCommand(executable, args)] };
+  }
+
+  const shellExecutable = resolveShellExecutable(shell, platform);
+
+  if (shell === "cmd") {
+    return {
+      executable: shellExecutable,
+      args: ["/c", formatArgvCommand(executable, args)]
+    };
+  }
+
+  const invocation = `& ${quotePowerShellArg(executable)} ${args.map(quotePowerShellArg).join(" ")}`.trim();
+
+  return {
+    executable: shellExecutable,
+    args: ["-NoLogo", "-Command", invocation]
+  };
+};
+
 const resolvePromptDelivery = (profile: AgentProfileRecord): AgentPromptDelivery => {
   if (profile.mode === "one_shot" && profile.promptDelivery === "manual") {
     return "argument";
@@ -108,10 +159,31 @@ export const buildAgentCommandPreview = (
   return {
     executable: profile.command,
     args,
-    displayCommand: [profile.command, ...args].map(quoteCommandPart).join(" "),
+    displayCommand: formatArgvCommand(profile.command, args),
     cwd: context.cwd,
     env: parseEnvText(profile.envText),
     promptDelivery,
     promptWillBeSentToStdin: promptDelivery === "send_to_stdin"
+  };
+};
+
+export const buildAgentLaunchConfig = (
+  profile: AgentProfileRecord,
+  context: {
+    project: ProjectSummary;
+    task: TaskRecord;
+    prompt: string;
+    cwd: string;
+  },
+  platform = process.platform
+): AgentLaunchConfig => {
+  const preview = buildAgentCommandPreview(profile, context);
+  const wrapped = wrapAgentCommandForShell(profile.shell, preview.executable, preview.args, platform);
+
+  return {
+    ...preview,
+    spawnExecutable: wrapped.executable,
+    spawnArgs: wrapped.args,
+    displayCommand: formatArgvCommand(wrapped.executable, wrapped.args)
   };
 };

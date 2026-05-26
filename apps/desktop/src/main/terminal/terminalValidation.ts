@@ -2,15 +2,25 @@ import { z } from "zod";
 
 const terminalSizeSchema = z.number().int().min(1).max(500);
 
-export const createTerminalRequestSchema = z.object({
-  projectId: z.string().uuid(),
-  taskId: z.string().uuid().optional(),
-  agentProfileId: z.string().uuid().optional(),
-  cwd: z.string().max(4096).optional(),
-  cols: terminalSizeSchema.optional(),
-  rows: terminalSizeSchema.optional(),
-  shell: z.enum(["powershell", "cmd"]).optional()
-});
+export const createTerminalRequestSchema = z
+  .object({
+    projectId: z.string().uuid(),
+    taskId: z.string().uuid().optional(),
+    agentProfileId: z.string().uuid().optional(),
+    cwd: z.string().max(4096).optional(),
+    cols: terminalSizeSchema.optional(),
+    rows: terminalSizeSchema.optional(),
+    shell: z.enum(["powershell", "cmd"]).optional()
+  })
+  .superRefine((value, context) => {
+    if (value.agentProfileId && !value.taskId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Agent profile launch requires a task id.",
+        path: ["agentProfileId"]
+      });
+    }
+  });
 
 export const terminalWriteRequestSchema = z.object({
   id: z.string().uuid(),

@@ -379,6 +379,9 @@ function AgentProfileDialog({
             placeholder="OPENAI_API_KEY=..."
             value={draft.envText}
           />
+          <p className="text-xs text-muted">
+            Values are passed to child processes. Do not store API keys or other secrets in profiles.
+          </p>
 
           <div className="flex justify-end gap-2 border-t border-border pt-4">
             <Button onClick={onClose} variant="ghost">

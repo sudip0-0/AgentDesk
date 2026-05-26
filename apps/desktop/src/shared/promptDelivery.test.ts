@@ -27,6 +27,16 @@ describe("promptDelivery", () => {
     vi.useRealTimers();
   });
 
+  it("writes multi-line prompts line by line with terminal line endings", async () => {
+    const writes: string[] = [];
+
+    await writePromptToTerminal("line one\nline two", (data) => {
+      writes.push(data);
+    }, 0);
+
+    expect(writes).toEqual(["line one\r\n", "line two\r"]);
+  });
+
   it("splits prompts on Windows and Unix newlines", () => {
     expect(splitPromptLines("a\r\nb\nc")).toEqual(["a", "b", "c"]);
   });

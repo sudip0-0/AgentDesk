@@ -16,6 +16,28 @@ describe("terminalValidation", () => {
     expect(result.success).toBe(true);
   });
 
+  it("rejects agent profile launch without a task id", () => {
+    const result = parseIpcPayload(createTerminalRequestSchema, {
+      projectId: "550e8400-e29b-41d4-a716-446655440000",
+      agentProfileId: "660e8400-e29b-41d4-a716-446655440002"
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.message).toMatch(/task id/i);
+    }
+  });
+
+  it("accepts agent profile launch when a task id is provided", () => {
+    const result = parseIpcPayload(createTerminalRequestSchema, {
+      projectId: "550e8400-e29b-41d4-a716-446655440000",
+      taskId: "660e8400-e29b-41d4-a716-446655440001",
+      agentProfileId: "660e8400-e29b-41d4-a716-446655440002"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("requires a project id when creating a terminal", () => {
     const result = parseIpcPayload(createTerminalRequestSchema, {
       cwd: "."

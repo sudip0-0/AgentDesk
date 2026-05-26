@@ -1,7 +1,8 @@
 import type { WebContents } from "electron";
 import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
-import { buildAgentCommandPreview } from "../../shared/agentCommandBuilder.js";
+import { buildAgentLaunchConfig } from "../../shared/agentCommandBuilder.js";
+import { writePromptToTerminal } from "../../shared/promptDelivery.js";
 import type { AgentRunStatus } from "../db/repositories/agentRunRepository.js";
 import { getAgentProfileById } from "../db/repositories/agentProfileRepository.js";
 import { getProjectById } from "../db/repositories/projectRepository.js";
@@ -95,10 +96,18 @@ export class TerminalSessionManager {
       });
     }
 
+    if (request.agentProfileId && !request.taskId) {
+      throw new Error("Agent profile launch requires a linked task.");
+    }
+
     const profile = request.agentProfileId ? getAgentProfileById(request.agentProfileId) : null;
 
     if (request.agentProfileId && !profile) {
       throw new Error("Agent profile was not found.");
+    }
+
+    if (request.agentProfileId && !linkedTask) {
+      throw new Error("Agent profile launch requires a linked task.");
     }
 
     const requestedCwd = profile?.workingDirectoryBehavior === "project_root" ? undefined : request.cwd;
@@ -111,13 +120,14 @@ export class TerminalSessionManager {
     const size = normalizeTerminalSize(request.cols, request.rows);
     const id = randomUUID();
     const prompt = linkedTask ? buildPrompt("implementation", { project, task: linkedTask }) : undefined;
-    const shell = resolveShell(request.shell);
-    const command = profile && linkedTask && prompt
-      ? buildAgentCommandPreview(profile, { project, task: linkedTask, prompt, cwd })
-      : null;
-    const executable = command?.executable ?? shell;
-    const args = command?.args ?? [];
-    const displayCommand = command?.displayCommand ?? shell;
+    const panelShell = resolveShell(request.shell);
+    const command =
+      profile && linkedTask && prompt
+        ? buildAgentLaunchConfig(profile, { project, task: linkedTask, prompt, cwd })
+        : null;
+    const executable = command?.spawnExecutable ?? panelShell;
+    const args = command?.spawnArgs ?? [];
+    const displayCommand = command?.displayCommand ?? panelShell;
     const agentRunId = this.logWriter.startSession({
       projectId: project.id,
       terminalSessionId: id,
@@ -128,16 +138,38 @@ export class TerminalSessionManager {
       prompt
     });
 
-    const pty = spawn(executable, args, {
-      name: "xterm-256color",
-      cols: size.cols,
-      rows: size.rows,
-      cwd,
-      env: {
-        ...process.env,
-        ...command?.env
+    let pty: IPty;
+
+    try {
+      pty = spawn(executable, args, {
+        name: "xterm-256color",
+        cols: size.cols,
+        rows: size.rows,
+        cwd,
+        env: {
+          ...process.env,
+          ...command?.env
+        }
+      });
+    } catch (spawnError) {
+      this.logWriter.endSession(id, agentRunId, "failed");
+
+      if (linkedTask) {
+        setTaskStatus({
+          projectId: project.id,
+          id: linkedTask.id,
+          status: "ready"
+        });
       }
-    });
+
+      const reason = spawnError instanceof Error ? spawnError.message : "Unknown error";
+      const hint =
+        profile && /enoent|not found|cannot find/i.test(reason)
+          ? ` Check that "${profile.command}" is installed and on your PATH.`
+          : "";
+
+      throw new Error(`Failed to start terminal for "${displayCommand}".${hint} (${reason})`);
+    }
 
     this.sessions.set(id, {
       id,
@@ -153,9 +185,15 @@ export class TerminalSessionManager {
 
     if (command?.promptWillBeSentToStdin && prompt) {
       setTimeout(() => {
-        if (this.sessions.has(id)) {
-          pty.write(`${prompt}\r`);
-        }
+        void (async () => {
+          if (!this.sessions.has(id)) {
+            return;
+          }
+
+          await writePromptToTerminal(prompt, (data) => {
+            pty.write(data);
+          });
+        })();
       }, 500);
     }
 
@@ -194,7 +232,7 @@ export class TerminalSessionManager {
       }
     });
 
-    return { id, runId: agentRunId, cwd, shell: profile?.name ?? shell };
+    return { id, runId: agentRunId, cwd, shell: profile?.name ?? panelShell };
   }
 
   public write(request: TerminalWriteRequest, webContents: WebContents): void {

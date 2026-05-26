@@ -59,3 +59,9 @@ export interface AgentCommandPreview {
   promptDelivery: AgentPromptDelivery;
   promptWillBeSentToStdin: boolean;
 }
+
+/** Resolved PTY spawn target after applying the profile shell wrapper. */
+export interface AgentLaunchConfig extends AgentCommandPreview {
+  spawnExecutable: string;
+  spawnArgs: string[];
+}
