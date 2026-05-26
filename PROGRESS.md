@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, and Phase 5 terminal engine are complete. Full README MVP criteria are not done yet (prompt engine, agent profiles, quality runner, git UI).
+Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, and Phase 5 terminal engine are complete. Full README MVP criteria are not done yet (agent profiles, quality runner, git UI).
 
 ## MVP Definition
 
@@ -14,7 +14,7 @@ Target MVP capabilities (see README.md):
 | --- | --- |
 | Open a local project | Done |
 | Create and manage tasks | Done |
-| Generate prompts | Not started (Phase 4) |
+| Generate prompts | Done |
 | Launch CLI agents in embedded terminals | Partial (terminals work; task-linked runs and prompts work; agent profiles pending) |
 | Save run logs | Done |
 | Run quality checks | Not started (Phase 7) |
@@ -56,6 +56,13 @@ Target MVP capabilities (see README.md):
 - Completed TASK-0302: kanban board with Backlog, Ready, Running, Needs Review, Failed, Blocked, and Done columns.
 - Completed TASK-0303: structured task contract fields for goal, context, acceptance criteria, likely files, quality commands, security notes, done definition, and dependencies.
 - Added project-scoped task IPC authorization, delete dialog, FK-safe task deletion, and task validation tests.
+
+### Phase 4: Prompt Engine
+
+- Completed TASK-0401: reusable prompt template system with implementation, review, fix, test, and security templates.
+- Completed TASK-0402: implementation prompts generated from project and task contract context.
+- Completed TASK-0403: review and fix prompts available alongside test and security prompts.
+- Added prompt preview UI, copy prompt action, and send-to-active-terminal action.
 
 ### Phase 6 (partial): Task-Linked Runs
 
@@ -105,9 +112,9 @@ None.
 
 Next focused tasks:
 
-1. TASK-0401: Implement Prompt Template System.
-2. TASK-0402: Generate Implementation Prompt from Task.
-3. TASK-0403: Generate Review and Fix Prompts.
+1. TASK-0601: Create Agent Profile Data Model.
+2. TASK-0602: Add Default Agent Profiles.
+3. TASK-0603: Launch Agent from Task.
 
 ## Current Risks
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { DatabaseHealth } from "../../shared/dbTypes";
+import type { PromptSendRequest } from "../../shared/promptSendTypes";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../shared/projectTypes";
 import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
 import type { TaskRecord } from "../../shared/taskTypes";
@@ -32,6 +33,7 @@ export function App(): React.JSX.Element {
   const [projectError, setProjectError] = useState<string | null>(null);
   const [isOpeningProject, setIsOpeningProject] = useState(false);
   const [terminalLaunch, setTerminalLaunch] = useState<TaskTerminalLaunch | null>(null);
+  const [promptSendRequest, setPromptSendRequest] = useState<PromptSendRequest | null>(null);
 
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
 
@@ -152,7 +154,7 @@ export function App(): React.JSX.Element {
       <div className="grid min-w-0 grid-rows-[auto_1fr]">
         <header className="flex items-center justify-between gap-4 border-b border-border bg-[#151b22] px-6 py-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 3</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 4</span>
             <h1 className="mt-1 text-xl font-bold text-text">{phase}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -232,7 +234,9 @@ export function App(): React.JSX.Element {
             <TerminalPanel
               launchRequest={terminalLaunch}
               onLaunchHandled={() => setTerminalLaunch(null)}
+              onPromptSendHandled={() => setPromptSendRequest(null)}
               onTaskStatusChanged={refreshOverview}
+              promptSendRequest={promptSendRequest}
               project={activeProject}
             />
           ) : null}
@@ -245,6 +249,10 @@ export function App(): React.JSX.Element {
                 }
 
                 setTerminalLaunch({ projectId: activeProject.id, task });
+                setActiveNav("terminal");
+              }}
+              onSendPromptToTerminal={(request: PromptSendRequest) => {
+                setPromptSendRequest(request);
                 setActiveNav("terminal");
               }}
               onTasksChanged={refreshOverview}

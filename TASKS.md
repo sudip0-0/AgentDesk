@@ -209,7 +209,7 @@ Each task supports:
 
 ### TASK-0401: Implement Prompt Template System
 
-Status: backlog
+Status: done
 
 Goal:
 Create reusable prompt templates.
@@ -227,7 +227,7 @@ Acceptance Criteria:
 
 ### TASK-0402: Generate Implementation Prompt from Task
 
-Status: backlog
+Status: done
 
 Goal:
 Generate a high-quality agent prompt for a selected task.
@@ -246,7 +246,7 @@ Acceptance Criteria:
 
 ### TASK-0403: Generate Review and Fix Prompts
 
-Status: backlog
+Status: done
 
 Goal:
 Generate review and fix prompts for agent output.

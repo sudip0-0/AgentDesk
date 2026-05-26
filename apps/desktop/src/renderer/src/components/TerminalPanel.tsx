@@ -1,13 +1,14 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { buildPrompt } from "../../../shared/promptEngine";
+import type { PromptSendRequest } from "../../../shared/promptSendTypes";
 import type {
   TerminalDataEvent,
   TerminalErrorEvent,
   TerminalExitEvent,
   TerminalShell
 } from "../../../shared/terminalTypes";
-import { buildImplementationPrompt } from "../../../shared/buildTaskPrompt";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { TaskTerminalLaunch } from "../../../shared/taskLaunchTypes";
 import { TranscriptPanel } from "./TranscriptPanel";
@@ -240,14 +241,18 @@ const TerminalTabPane = forwardRef<TerminalPaneHandle, TerminalTabPaneProps>(fun
 interface TerminalPanelProps {
   project: ProjectSummary | null;
   launchRequest: TaskTerminalLaunch | null;
+  promptSendRequest: PromptSendRequest | null;
   onLaunchHandled: () => void;
+  onPromptSendHandled: () => void;
   onTaskStatusChanged: () => void;
 }
 
 export function TerminalPanel({
   project,
   launchRequest,
+  promptSendRequest,
   onLaunchHandled,
+  onPromptSendHandled,
   onTaskStatusChanged
 }: TerminalPanelProps): React.JSX.Element {
   const initialState = useRef<{ tabs: TerminalTab[]; activeId: string } | null>(null);
@@ -449,7 +454,7 @@ export function TerminalPanel({
     let cancelled = false;
 
     const launchTaskTerminal = async (): Promise<void> => {
-      const prompt = buildImplementationPrompt(launchRequest.task, project.name);
+      const prompt = buildPrompt("implementation", { project, task: launchRequest.task });
 
       try {
         await navigator.clipboard.writeText(prompt);
@@ -480,6 +485,25 @@ export function TerminalPanel({
       cancelled = true;
     };
   }, [launchRequest, onLaunchHandled, project, startTerminal]);
+
+  useEffect(() => {
+    if (!promptSendRequest) {
+      return;
+    }
+
+    if (!activeTab?.sessionId) {
+      setLaunchMessage("Start a terminal before sending a prompt to the active session.");
+      onPromptSendHandled();
+      return;
+    }
+
+    window.agentdesk.terminals.write({
+      id: activeTab.sessionId,
+      data: `${promptSendRequest.prompt}\r`
+    });
+    setLaunchMessage(`${promptSendRequest.label} sent to active terminal.`);
+    onPromptSendHandled();
+  }, [activeTab?.sessionId, onPromptSendHandled, promptSendRequest]);
 
   useEffect(() => {
     return () => {

@@ -9,7 +9,7 @@ import {
   setTaskStatus
 } from "../db/repositories/taskRepository.js";
 import type { TerminalLogWriter } from "../db/terminalLogWriter.js";
-import { buildImplementationPrompt } from "../../shared/buildTaskPrompt.js";
+import { buildPrompt } from "../../shared/promptEngine.js";
 import { isPathInsideRoot } from "../projects/projectPaths.js";
 import { redactSecrets } from "./logRedaction.js";
 import { normalizeTerminalSize, resolveShell, resolveTerminalCwd } from "./terminalConfig.js";
@@ -93,7 +93,7 @@ export class TerminalSessionManager {
     const size = normalizeTerminalSize(request.cols, request.rows);
     const shell = resolveShell(request.shell);
     const id = randomUUID();
-    const prompt = linkedTask ? buildImplementationPrompt(linkedTask, project.name) : undefined;
+    const prompt = linkedTask ? buildPrompt("implementation", { project, task: linkedTask }) : undefined;
     const agentRunId = this.logWriter.startSession({
       projectId: project.id,
       terminalSessionId: id,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { buildImplementationPrompt } from "../../../shared/buildTaskPrompt";
+import { buildPrompt, promptTemplates, type PromptTemplateId } from "../../../shared/promptEngine";
+import type { PromptSendRequest } from "../../../shared/promptSendTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { TaskInput, TaskPriority, TaskRecord, TaskStatus } from "../../../shared/taskTypes";
 import { taskPriorities, taskStatuses } from "../../../shared/taskTypes";
@@ -46,12 +47,14 @@ interface TaskBoardProps {
   project: ProjectSummary | null;
   onTasksChanged: () => void;
   onLaunchInTerminal: (task: TaskRecord) => void;
+  onSendPromptToTerminal: (request: PromptSendRequest) => void;
 }
 
 export function TaskBoard({
   project,
   onTasksChanged,
-  onLaunchInTerminal
+  onLaunchInTerminal,
+  onSendPromptToTerminal
 }: TaskBoardProps): React.JSX.Element {
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export function TaskBoard({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<PromptTemplateId>("implementation");
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
 
@@ -299,23 +303,36 @@ export function TaskBoard({
       </div>
 
       <TaskDetailPanel
-        onCopyPrompt={async (task) => {
+        onCopyPrompt={async (task, templateId) => {
           if (!project) {
             return;
           }
 
           try {
-            await navigator.clipboard.writeText(buildImplementationPrompt(task, project.name));
-            setMessage("Implementation prompt copied to clipboard.");
+            const prompt = buildPrompt(templateId, { project, task });
+            const templateLabel = promptTemplates.find((template) => template.id === templateId)?.label ?? "Prompt";
+            await navigator.clipboard.writeText(prompt);
+            setMessage(`${templateLabel} prompt copied.`);
           } catch {
-            setError("Failed to copy the implementation prompt.");
+            setError("Failed to copy the prompt.");
           }
         }}
         onDelete={() => setDeleteConfirmOpen(true)}
         onEdit={openEditDialog}
         onLaunchInTerminal={onLaunchInTerminal}
+        onSendPromptToTerminal={(task, templateId) => {
+          const prompt = buildPrompt(templateId, { project, task });
+          const templateLabel = promptTemplates.find((template) => template.id === templateId)?.label ?? "Prompt";
+          onSendPromptToTerminal({
+            id: crypto.randomUUID(),
+            prompt,
+            label: `${templateLabel} prompt`
+          });
+        }}
         onStatusChange={(taskId, status) => void changeStatus(taskId, status)}
         project={project}
+        selectedTemplateId={selectedTemplateId}
+        setSelectedTemplateId={setSelectedTemplateId}
         task={selectedTask}
       />
 
@@ -354,15 +371,21 @@ function TaskDetailPanel({
   onDelete,
   onCopyPrompt,
   onLaunchInTerminal,
-  onStatusChange
+  onSendPromptToTerminal,
+  onStatusChange,
+  selectedTemplateId,
+  setSelectedTemplateId
 }: {
   task: TaskRecord | null;
   project: ProjectSummary;
   onEdit: (task: TaskRecord) => void;
   onDelete: () => void;
-  onCopyPrompt: (task: TaskRecord) => void;
+  onCopyPrompt: (task: TaskRecord, templateId: PromptTemplateId) => void;
   onLaunchInTerminal: (task: TaskRecord) => void;
+  onSendPromptToTerminal: (task: TaskRecord, templateId: PromptTemplateId) => void;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
+  selectedTemplateId: PromptTemplateId;
+  setSelectedTemplateId: (templateId: PromptTemplateId) => void;
 }): React.JSX.Element {
   if (!task) {
     return (
@@ -372,6 +395,10 @@ function TaskDetailPanel({
       </Card>
     );
   }
+
+  const selectedTemplate =
+    promptTemplates.find((template) => template.id === selectedTemplateId) ?? promptTemplates[0];
+  const promptPreview = buildPrompt(selectedTemplateId, { project, task });
 
   return (
     <aside className="grid content-start gap-3">
@@ -403,9 +430,6 @@ function TaskDetailPanel({
           <Button onClick={() => onLaunchInTerminal(task)} variant="primary">
             Run in Terminal
           </Button>
-          <Button onClick={() => void onCopyPrompt(task)} variant="secondary">
-            Copy Prompt
-          </Button>
           <Button onClick={() => onEdit(task)} variant="secondary">
             Edit
           </Button>
@@ -417,6 +441,44 @@ function TaskDetailPanel({
           Run in Terminal links this task to the session, sets status to Running, and copies the
           implementation prompt for {project.name}.
         </p>
+      </Card>
+
+      <Card>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Prompt Preview</CardTitle>
+            <CardDescription>{selectedTemplate.description}</CardDescription>
+          </div>
+          <Badge>{selectedTemplate.label}</Badge>
+        </div>
+
+        <label className="mt-4 grid gap-1.5">
+          <span className="text-xs font-bold text-muted">Prompt Template</span>
+          <select
+            className="rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+            onChange={(event) => setSelectedTemplateId(event.target.value as PromptTemplateId)}
+            value={selectedTemplateId}
+          >
+            {promptTemplates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+          {promptPreview}
+        </pre>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button onClick={() => void onCopyPrompt(task, selectedTemplateId)} variant="primary">
+            Copy Prompt
+          </Button>
+          <Button onClick={() => onSendPromptToTerminal(task, selectedTemplateId)} variant="secondary">
+            Send to Active Terminal
+          </Button>
+        </div>
       </Card>
 
       <TaskContractSection label="Goal" value={task.goal} />
