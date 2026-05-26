@@ -3,9 +3,9 @@ import type {
   AgentRunSummary,
   NextTaskSummary,
   ProjectOverview,
-  TaskStatus,
   TaskStatusSummary
 } from "../../../shared/projectTypes.js";
+import { taskStatuses, type TaskStatus } from "../../../shared/taskTypes.js";
 import { getProjectWithFreshMetadata } from "./projectRepository.js";
 import { getDatabase } from "../client.js";
 import { agentRuns, tasks } from "../schema.js";
@@ -35,21 +35,11 @@ const buildTaskSummary = (projectId: string): TaskStatusSummary => {
 
   const summary = emptyTaskSummary();
 
-  const statuses: TaskStatus[] = [
-    "backlog",
-    "ready",
-    "running",
-    "needs_review",
-    "failed",
-    "blocked",
-    "done"
-  ];
-
   for (const row of rows) {
     const status = row.status as TaskStatus;
     const count = Number(row.count);
 
-    if (statuses.includes(status)) {
+    if ((taskStatuses as readonly string[]).includes(status)) {
       summary[status] = count;
       summary.total += count;
     }
@@ -69,13 +59,27 @@ const listRecentRuns = (projectId: string, limit = 5): AgentRunSummary[] => {
       startedAt: agentRuns.startedAt,
       finishedAt: agentRuns.finishedAt,
       exitCode: agentRuns.exitCode,
-      summary: agentRuns.summary
+      summary: agentRuns.summary,
+      taskId: agentRuns.taskId,
+      taskTitle: tasks.title
     })
     .from(agentRuns)
+    .leftJoin(tasks, eq(agentRuns.taskId, tasks.id))
     .where(eq(agentRuns.projectId, projectId))
     .orderBy(desc(agentRuns.startedAt))
     .limit(limit)
-    .all();
+    .all()
+    .map((run) => ({
+      id: run.id,
+      command: run.command,
+      status: run.status,
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt,
+      exitCode: run.exitCode,
+      summary: run.summary,
+      taskId: run.taskId ?? null,
+      taskTitle: run.taskTitle ?? null
+    }));
 };
 
 const findNextTask = (projectId: string): NextTaskSummary | null => {

@@ -4,6 +4,7 @@ export const taskStatuses = [
   "running",
   "needs_review",
   "failed",
+  "blocked",
   "done"
 ] as const;
 
@@ -27,6 +28,7 @@ export interface TaskRecord {
   qualityCommands: string;
   securityNotes: string;
   doneDefinition: string;
+  dependsOn: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,17 +46,20 @@ export interface TaskInput {
   qualityCommands: string;
   securityNotes: string;
   doneDefinition: string;
+  dependsOn: string;
 }
 
-export interface TaskUpdateInput extends Omit<TaskInput, "projectId"> {
+export interface TaskUpdateInput extends TaskInput {
   id: string;
 }
 
 export interface TaskStatusUpdateInput {
+  projectId: string;
   id: string;
   status: TaskStatus;
 }
 
 export interface TaskDeleteInput {
+  projectId: string;
   id: string;
 }

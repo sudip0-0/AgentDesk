@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { DatabaseHealth } from "../../shared/dbTypes";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../shared/projectTypes";
+import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
+import type { TaskRecord } from "../../shared/taskTypes";
 import { TaskBoard } from "./components/TaskBoard";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { Badge } from "./components/ui/Badge";
@@ -29,6 +31,7 @@ export function App(): React.JSX.Element {
   const [projectMessage, setProjectMessage] = useState<string | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [isOpeningProject, setIsOpeningProject] = useState(false);
+  const [terminalLaunch, setTerminalLaunch] = useState<TaskTerminalLaunch | null>(null);
 
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
 
@@ -225,10 +228,28 @@ export function App(): React.JSX.Element {
             </section>
           ) : null}
 
-          {activeNav === "terminal" ? <TerminalPanel project={activeProject} /> : null}
+          {activeNav === "terminal" ? (
+            <TerminalPanel
+              launchRequest={terminalLaunch}
+              onLaunchHandled={() => setTerminalLaunch(null)}
+              onTaskStatusChanged={refreshOverview}
+              project={activeProject}
+            />
+          ) : null}
 
           {activeNav === "tasks" ? (
-            <TaskBoard onTasksChanged={refreshOverview} project={activeProject} />
+            <TaskBoard
+              onLaunchInTerminal={(task: TaskRecord) => {
+                if (!activeProject) {
+                  return;
+                }
+
+                setTerminalLaunch({ projectId: activeProject.id, task });
+                setActiveNav("terminal");
+              }}
+              onTasksChanged={refreshOverview}
+              project={activeProject}
+            />
           ) : null}
 
           <section className="grid gap-3 md:grid-cols-3">
@@ -361,9 +382,14 @@ function ProjectOverviewPanel({
                   key={run.id}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-text">{run.command}</span>
+                    <span className="text-sm font-bold text-text">
+                      {run.taskTitle ?? run.command}
+                    </span>
                     <Badge variant={run.status === "completed" ? "success" : "default"}>{run.status}</Badge>
                   </div>
+                  {run.taskTitle ? (
+                    <span className="text-xs text-muted">{run.command}</span>
+                  ) : null}
                   <span className="text-xs text-muted">{run.startedAt}</span>
                   {run.summary ? <span className="text-xs text-muted">{run.summary}</span> : null}
                 </div>

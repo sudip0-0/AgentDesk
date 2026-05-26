@@ -100,13 +100,15 @@ describe("database", () => {
       filesLikelyAffected: "apps/desktop/src",
       qualityCommands: "npm test",
       securityNotes: "Renderer must use IPC.",
-      doneDefinition: "Quality commands pass."
+      doneDefinition: "Quality commands pass.",
+      dependsOn: "TASK-0301"
     });
 
     expect(listTasks(project.id)).toHaveLength(1);
     expect(task.goal).toBe("Track AgentDesk work.");
 
     const updated = updateTask({
+      projectId: project.id,
       id: task.id,
       title: "Implement kanban board",
       description: task.description,
@@ -118,17 +120,18 @@ describe("database", () => {
       filesLikelyAffected: task.filesLikelyAffected,
       qualityCommands: task.qualityCommands,
       securityNotes: task.securityNotes,
-      doneDefinition: task.doneDefinition
+      doneDefinition: task.doneDefinition,
+      dependsOn: task.dependsOn
     });
 
     expect(updated.title).toBe("Implement kanban board");
     expect(updated.status).toBe("ready");
     expect(updated.priority).toBe("medium");
 
-    const moved = setTaskStatus({ id: task.id, status: "needs_review" });
+    const moved = setTaskStatus({ projectId: project.id, id: task.id, status: "needs_review" });
     expect(moved.status).toBe("needs_review");
 
-    deleteTask(task.id);
+    deleteTask(task.id, project.id);
     expect(listTasks(project.id)).toHaveLength(0);
   });
 });

@@ -7,7 +7,9 @@ import type {
   TerminalExitEvent,
   TerminalShell
 } from "../../../shared/terminalTypes";
+import { buildImplementationPrompt } from "../../../shared/buildTaskPrompt";
 import type { ProjectSummary } from "../../../shared/projectTypes";
+import type { TaskTerminalLaunch } from "../../../shared/taskLaunchTypes";
 import { TranscriptPanel } from "./TranscriptPanel";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
@@ -22,6 +24,7 @@ interface TerminalTab {
   title: string;
   sessionId: string | null;
   runId: string | null;
+  taskId: string | null;
   status: TerminalStatus;
   label: string;
   error: string | null;
@@ -41,6 +44,7 @@ const createTab = (title?: string): TerminalTab => {
     title: title ?? `Terminal ${next}`,
     sessionId: null,
     runId: null,
+    taskId: null,
     status: "idle",
     label: "Not started",
     error: null
@@ -235,9 +239,17 @@ const TerminalTabPane = forwardRef<TerminalPaneHandle, TerminalTabPaneProps>(fun
 
 interface TerminalPanelProps {
   project: ProjectSummary | null;
+  launchRequest: TaskTerminalLaunch | null;
+  onLaunchHandled: () => void;
+  onTaskStatusChanged: () => void;
 }
 
-export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Element {
+export function TerminalPanel({
+  project,
+  launchRequest,
+  onLaunchHandled,
+  onTaskStatusChanged
+}: TerminalPanelProps): React.JSX.Element {
   const initialState = useRef<{ tabs: TerminalTab[]; activeId: string } | null>(null);
 
   if (!initialState.current) {
@@ -250,9 +262,12 @@ export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Elemen
   const [cwd, setCwd] = useState("");
   const [shell, setShell] = useState<TerminalShell>("powershell");
   const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const [launchMessage, setLaunchMessage] = useState<string | null>(null);
   const paneRefs = useRef<Map<string, TerminalPaneHandle | null>>(new Map());
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
 
   const updateTab = useCallback((tabId: string, patch: Partial<TerminalTab>): void => {
     setTabs((current) => current.map((tab) => (tab.id === tabId ? { ...tab, ...patch } : tab)));
@@ -307,47 +322,62 @@ export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Elemen
     });
   };
 
-  const startTerminal = async (): Promise<void> => {
-    if (!activeTab || !project || activeTab.sessionId || activeTab.status === "starting") {
+  const startTerminal = useCallback(async (options?: { tabId?: string; taskId?: string }): Promise<void> => {
+    const currentTabs = tabsRef.current;
+    const currentActive =
+      currentTabs.find((entry) => entry.id === activeTabId) ?? currentTabs[0];
+    const tab = options?.tabId
+      ? currentTabs.find((entry) => entry.id === options.tabId)
+      : currentActive;
+
+    if (!tab || !project || tab.sessionId || tab.status === "starting") {
       return;
     }
 
-    const pane = paneRefs.current.get(activeTab.id);
+    const pane = paneRefs.current.get(tab.id);
     pane?.clear();
     const size = pane?.fit() ?? { cols: 80, rows: 24 };
 
-    updateTab(activeTab.id, { status: "starting", error: null });
+    updateTab(tab.id, { status: "starting", error: null });
 
     try {
       const result = await window.agentdesk.terminals.create({
         projectId: project.id,
+        taskId: options?.taskId,
         cwd,
         shell,
         cols: size.cols,
         rows: size.rows
       });
 
-      updateTab(activeTab.id, {
+      updateTab(tab.id, {
         sessionId: result.id,
         runId: result.runId,
+        taskId: options?.taskId ?? null,
         status: "running",
-        label: `${result.shell} in ${result.cwd}`,
-        title: activeTab.title.startsWith("Terminal ") ? result.shell : activeTab.title
+        label: options?.taskId
+          ? `Task run · ${result.shell}`
+          : `${result.shell} in ${result.cwd}`,
+        title: tab.title.startsWith("Terminal ") ? result.shell : tab.title
       });
 
+      if (options?.taskId) {
+        onTaskStatusChanged();
+      }
+
       requestAnimationFrame(() => {
-        paneRefs.current.get(activeTab.id)?.fit();
+        paneRefs.current.get(tab.id)?.fit();
       });
     } catch (createError) {
       const message =
         createError instanceof Error ? createError.message : "Failed to start terminal.";
-      updateTab(activeTab.id, {
+      updateTab(tab.id, {
         status: "error",
         error: message,
         label: "Failed to start"
       });
     }
-  };
+  }, [activeTabId, cwd, onTaskStatusChanged, project, shell, updateTab]);
 
   const killTerminal = async (): Promise<void> => {
     if (!activeTab?.sessionId) {
@@ -369,18 +399,30 @@ export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Elemen
 
   useEffect(() => {
     const removeExitListener = window.agentdesk.terminals.onExit(({ id, exitCode }: TerminalExitEvent) => {
+      let taskLinked = false;
+
       setTabs((current) =>
-        current.map((tab) =>
-          tab.sessionId === id
-            ? {
-                ...tab,
-                sessionId: null,
-                status: "exited" as const,
-                label: `Exited (${exitCode})`
-              }
-            : tab
-        )
+        current.map((tab) => {
+          if (tab.sessionId !== id) {
+            return tab;
+          }
+
+          if (tab.taskId) {
+            taskLinked = true;
+          }
+
+          return {
+            ...tab,
+            sessionId: null,
+            status: "exited" as const,
+            label: tab.taskId ? `Task exited (${exitCode})` : `Exited (${exitCode})`
+          };
+        })
       );
+
+      if (taskLinked) {
+        onTaskStatusChanged();
+      }
     });
 
     const removeErrorListener = window.agentdesk.terminals.onError(
@@ -397,10 +439,47 @@ export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Elemen
       removeExitListener();
       removeErrorListener();
     };
-  }, []);
+  }, [onTaskStatusChanged]);
 
-  const tabsRef = useRef(tabs);
-  tabsRef.current = tabs;
+  useEffect(() => {
+    if (!launchRequest || !project || launchRequest.projectId !== project.id) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const launchTaskTerminal = async (): Promise<void> => {
+      const prompt = buildImplementationPrompt(launchRequest.task, project.name);
+
+      try {
+        await navigator.clipboard.writeText(prompt);
+        setLaunchMessage("Implementation prompt copied to clipboard. Paste it into the terminal.");
+      } catch {
+        setLaunchMessage("Could not copy the prompt to the clipboard. Build it from the task detail panel.");
+      }
+
+      const tab = createTab(launchRequest.task.title);
+      setTabs((current) => [...current, tab]);
+      setActiveTabId(tab.id);
+      onLaunchHandled();
+
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+
+      if (cancelled) {
+        return;
+      }
+
+      await startTerminal({ tabId: tab.id, taskId: launchRequest.task.id });
+    };
+
+    void launchTaskTerminal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [launchRequest, onLaunchHandled, project, startTerminal]);
 
   useEffect(() => {
     return () => {
@@ -515,10 +594,17 @@ export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Elemen
         </div>
       </div>
 
+      {launchMessage ? (
+        <div className="rounded-md border border-accent/40 bg-accent/10 px-2.5 py-2 text-sm text-[#bfe9e3]">
+          {launchMessage}
+        </div>
+      ) : null}
+
       {activeTab ? (
         <div className="flex min-w-0 items-center gap-2 text-xs text-muted">
           <Badge variant={statusVariant(activeTab.status)}>{activeTab.status}</Badge>
           <span className="truncate">{activeTab.label}</span>
+          {activeTab.taskId ? <Badge variant="warning">Task linked</Badge> : null}
         </div>
       ) : null}
 

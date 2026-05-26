@@ -5,8 +5,7 @@ export const projectTaskListSchema = z.object({
   projectId: z.string().uuid()
 });
 
-export const taskInputSchema = z.object({
-  projectId: z.string().uuid(),
+const taskContractFields = {
   title: z.string().trim().min(1, "Task title is required.").max(160),
   description: z.string().max(4000),
   status: z.enum(taskStatuses),
@@ -17,19 +16,27 @@ export const taskInputSchema = z.object({
   filesLikelyAffected: z.string().max(4000),
   qualityCommands: z.string().max(4000),
   securityNotes: z.string().max(4000),
-  doneDefinition: z.string().max(4000)
+  doneDefinition: z.string().max(4000),
+  dependsOn: z.string().max(4000)
+};
+
+export const taskInputSchema = z.object({
+  projectId: z.string().uuid(),
+  ...taskContractFields
 });
 
-export const taskUpdateSchema = taskInputSchema.omit({ projectId: true }).extend({
+export const taskUpdateSchema = taskInputSchema.extend({
   id: z.string().uuid()
 });
 
 export const taskStatusUpdateSchema = z.object({
+  projectId: z.string().uuid(),
   id: z.string().uuid(),
   status: z.enum(taskStatuses)
 });
 
 export const taskDeleteSchema = z.object({
+  projectId: z.string().uuid(),
   id: z.string().uuid()
 });
 

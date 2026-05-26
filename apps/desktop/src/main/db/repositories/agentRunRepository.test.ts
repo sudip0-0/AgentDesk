@@ -10,6 +10,7 @@ import {
   getAgentRun,
   startAgentRun
 } from "./agentRunRepository.js";
+import { createTask } from "./taskRepository.js";
 
 const resetDatabase = (): void => {
   closeDatabase();
@@ -48,6 +49,35 @@ describe("agentRunRepository", () => {
 
     const run = getAgentRun(runId);
     expect(run?.projectId).toBe(firstProject.id);
+
+    const task = createTask({
+      projectId: firstProject.id,
+      title: "Linked run task",
+      description: "",
+      status: "ready",
+      priority: "medium",
+      goal: "",
+      context: "",
+      acceptanceCriteria: "",
+      filesLikelyAffected: "",
+      qualityCommands: "",
+      securityNotes: "",
+      doneDefinition: "",
+      dependsOn: ""
+    });
+
+    const linkedRunId = startAgentRun({
+      projectId: firstProject.id,
+      terminalSessionId: "session-linked",
+      command: "powershell.exe",
+      cwd: projectDirectory,
+      taskId: task.id,
+      prompt: "Implement the task."
+    });
+
+    const linkedRun = getAgentRun(linkedRunId);
+    expect(linkedRun?.taskId).toBe(task.id);
+    expect(linkedRun?.prompt).toBe("Implement the task.");
 
     assertRunBelongsToProject(runId, firstProject.id);
     expect(() => assertRunBelongsToProject(runId, otherProject.id)).toThrow(

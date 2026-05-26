@@ -134,7 +134,7 @@ export function TranscriptPanel({
 
   return (
     <Dialog
-      description="Transcript chunks load in pages so large logs stay responsive."
+      description="Transcript chunks load in pages so large logs stay responsive. Output may still contain secrets that were not redacted—review before sharing."
       onClose={onClose}
       open={open}
       title="Terminal transcript"

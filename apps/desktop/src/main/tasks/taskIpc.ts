@@ -63,6 +63,6 @@ export const registerTaskIpc = (): void => {
       throw new Error(parsed.message);
     }
 
-    deleteTask(parsed.data.id);
+    deleteTask(parsed.data.id, parsed.data.projectId);
   });
 };

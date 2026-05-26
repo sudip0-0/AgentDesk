@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { buildImplementationPrompt } from "../../../shared/buildTaskPrompt";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { TaskInput, TaskPriority, TaskRecord, TaskStatus } from "../../../shared/taskTypes";
 import { taskPriorities, taskStatuses } from "../../../shared/taskTypes";
@@ -15,6 +16,7 @@ const statusLabels: Record<TaskStatus, string> = {
   running: "Running",
   needs_review: "Needs Review",
   failed: "Failed",
+  blocked: "Blocked",
   done: "Done"
 };
 
@@ -36,15 +38,21 @@ const emptyTaskInput = (projectId: string): TaskInput => ({
   filesLikelyAffected: "",
   qualityCommands: "npm run lint\nnpm run typecheck\nnpm test\nnpm run build",
   securityNotes: "",
-  doneDefinition: ""
+  doneDefinition: "",
+  dependsOn: ""
 });
 
 interface TaskBoardProps {
   project: ProjectSummary | null;
   onTasksChanged: () => void;
+  onLaunchInTerminal: (task: TaskRecord) => void;
 }
 
-export function TaskBoard({ project, onTasksChanged }: TaskBoardProps): React.JSX.Element {
+export function TaskBoard({
+  project,
+  onTasksChanged,
+  onLaunchInTerminal
+}: TaskBoardProps): React.JSX.Element {
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TaskInput | null>(null);
@@ -53,6 +61,7 @@ export function TaskBoard({ project, onTasksChanged }: TaskBoardProps): React.JS
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
 
@@ -111,7 +120,8 @@ export function TaskBoard({ project, onTasksChanged }: TaskBoardProps): React.JS
       filesLikelyAffected: task.filesLikelyAffected,
       qualityCommands: task.qualityCommands,
       securityNotes: task.securityNotes,
-      doneDefinition: task.doneDefinition
+      doneDefinition: task.doneDefinition,
+      dependsOn: task.dependsOn
     });
     setSelectedTaskId(task.id);
   };
@@ -154,10 +164,18 @@ export function TaskBoard({ project, onTasksChanged }: TaskBoardProps): React.JS
   };
 
   const changeStatus = async (taskId: string, status: TaskStatus): Promise<void> => {
+    if (!project) {
+      return;
+    }
+
     setError(null);
 
     try {
-      const updatedTask = await window.agentdesk.tasks.setStatus({ id: taskId, status });
+      const updatedTask = await window.agentdesk.tasks.setStatus({
+        projectId: project.id,
+        id: taskId,
+        status
+      });
       setTasks((current) => current.map((task) => (task.id === taskId ? updatedTask : task)));
       setSelectedTaskId(taskId);
       onTasksChanged();
@@ -167,22 +185,17 @@ export function TaskBoard({ project, onTasksChanged }: TaskBoardProps): React.JS
   };
 
   const deleteSelectedTask = async (): Promise<void> => {
-    if (!selectedTask) {
-      return;
-    }
-
-    const confirmed = window.confirm(`Delete task "${selectedTask.title}"?`);
-
-    if (!confirmed) {
+    if (!project || !selectedTask) {
       return;
     }
 
     setError(null);
 
     try {
-      await window.agentdesk.tasks.delete({ id: selectedTask.id });
+      await window.agentdesk.tasks.delete({ projectId: project.id, id: selectedTask.id });
       setTasks((current) => current.filter((task) => task.id !== selectedTask.id));
       setSelectedTaskId(null);
+      setDeleteConfirmOpen(false);
       setMessage("Task deleted.");
       onTasksChanged();
     } catch (deleteError) {
@@ -238,13 +251,13 @@ export function TaskBoard({ project, onTasksChanged }: TaskBoardProps): React.JS
           </Card>
         ) : null}
 
-        <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="flex gap-3 overflow-x-auto pb-2">
           {taskStatuses.map((status) => {
             const columnTasks = tasks.filter((task) => task.status === status);
 
             return (
               <section
-                className="grid min-h-[220px] content-start gap-2 rounded-lg border border-border bg-[#111820] p-3"
+                className="grid min-h-[220px] w-72 shrink-0 content-start gap-2 rounded-lg border border-border bg-[#111820] p-3"
                 key={status}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -286,11 +299,41 @@ export function TaskBoard({ project, onTasksChanged }: TaskBoardProps): React.JS
       </div>
 
       <TaskDetailPanel
-        onDelete={() => void deleteSelectedTask()}
+        onCopyPrompt={async (task) => {
+          if (!project) {
+            return;
+          }
+
+          try {
+            await navigator.clipboard.writeText(buildImplementationPrompt(task, project.name));
+            setMessage("Implementation prompt copied to clipboard.");
+          } catch {
+            setError("Failed to copy the implementation prompt.");
+          }
+        }}
+        onDelete={() => setDeleteConfirmOpen(true)}
         onEdit={openEditDialog}
+        onLaunchInTerminal={onLaunchInTerminal}
         onStatusChange={(taskId, status) => void changeStatus(taskId, status)}
+        project={project}
         task={selectedTask}
       />
+
+      <Dialog
+        description="This removes the task from the local board. Linked run history is kept, but the task reference is cleared."
+        onClose={() => setDeleteConfirmOpen(false)}
+        open={deleteConfirmOpen && selectedTask !== null}
+        title={selectedTask ? `Delete "${selectedTask.title}"?` : "Delete task"}
+      >
+        <div className="flex justify-end gap-2 border-t border-border pt-4">
+          <Button onClick={() => setDeleteConfirmOpen(false)} variant="ghost">
+            Cancel
+          </Button>
+          <Button onClick={() => void deleteSelectedTask()} variant="danger">
+            Delete Task
+          </Button>
+        </div>
+      </Dialog>
 
       <TaskDialog
         draft={draft}
@@ -306,13 +349,19 @@ export function TaskBoard({ project, onTasksChanged }: TaskBoardProps): React.JS
 
 function TaskDetailPanel({
   task,
+  project,
   onEdit,
   onDelete,
+  onCopyPrompt,
+  onLaunchInTerminal,
   onStatusChange
 }: {
   task: TaskRecord | null;
+  project: ProjectSummary;
   onEdit: (task: TaskRecord) => void;
   onDelete: () => void;
+  onCopyPrompt: (task: TaskRecord) => void;
+  onLaunchInTerminal: (task: TaskRecord) => void;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
 }): React.JSX.Element {
   if (!task) {
@@ -351,13 +400,23 @@ function TaskDetailPanel({
         </label>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={() => onEdit(task)} variant="primary">
+          <Button onClick={() => onLaunchInTerminal(task)} variant="primary">
+            Run in Terminal
+          </Button>
+          <Button onClick={() => void onCopyPrompt(task)} variant="secondary">
+            Copy Prompt
+          </Button>
+          <Button onClick={() => onEdit(task)} variant="secondary">
             Edit
           </Button>
           <Button onClick={onDelete} variant="danger">
             Delete
           </Button>
         </div>
+        <p className="mt-2 text-xs text-muted">
+          Run in Terminal links this task to the session, sets status to Running, and copies the
+          implementation prompt for {project.name}.
+        </p>
       </Card>
 
       <TaskContractSection label="Goal" value={task.goal} />
@@ -366,6 +425,7 @@ function TaskDetailPanel({
       <TaskContractSection label="Security Notes" value={task.securityNotes} />
       <TaskContractSection label="Done Definition" value={task.doneDefinition} />
       <TaskContractSection label="Context" value={task.context} />
+      <TaskContractSection label="Dependencies" preserveLines value={task.dependsOn} />
       <TaskContractSection label="Files Likely Affected" preserveLines value={task.filesLikelyAffected} />
     </aside>
   );
@@ -473,6 +533,11 @@ function TaskDialog({
             value={draft.doneDefinition}
           />
           <TextArea label="Context" onChange={(value) => updateField("context", value)} value={draft.context} />
+          <TextArea
+            label="Dependencies"
+            onChange={(value) => updateField("dependsOn", value)}
+            value={draft.dependsOn}
+          />
           <TextArea
             label="Files Likely Affected"
             onChange={(value) => updateField("filesLikelyAffected", value)}

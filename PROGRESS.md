@@ -4,20 +4,22 @@
 
 ## Current Stage
 
-Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, and Phase 5 terminal engine are complete.
+Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, and Phase 5 terminal engine are complete. Full README MVP criteria are not done yet (prompt engine, agent profiles, quality runner, git UI).
 
 ## MVP Definition
 
-AgentDesk MVP is a Windows desktop app that can:
+Target MVP capabilities (see README.md):
 
-- open a local project
-- create and manage tasks
-- generate prompts
-- launch CLI agents in embedded terminals
-- save run logs
-- run quality checks
-- show git status and diffs
-- track progress locally
+| Capability | Status |
+| --- | --- |
+| Open a local project | Done |
+| Create and manage tasks | Done |
+| Generate prompts | Not started (Phase 4) |
+| Launch CLI agents in embedded terminals | Partial (terminals work; task-linked runs and prompts work; agent profiles pending) |
+| Save run logs | Done |
+| Run quality checks | Not started (Phase 7) |
+| Show git status and diffs | Not started (Phase 8) |
+| Track progress locally | Partial (SQLite + overview; PROGRESS.md sync pending) |
 
 ## Completed
 
@@ -51,9 +53,16 @@ AgentDesk MVP is a Windows desktop app that can:
 ### Phase 3: Task Board
 
 - Completed TASK-0301: task CRUD with SQLite persistence and validated IPC.
-- Completed TASK-0302: kanban board with Backlog, Ready, Running, Needs Review, Failed, and Done columns.
-- Completed TASK-0303: structured task contract fields for goal, context, acceptance criteria, likely files, quality commands, security notes, and done definition.
-- Added task detail panel, status changes, delete confirmation, and empty states.
+- Completed TASK-0302: kanban board with Backlog, Ready, Running, Needs Review, Failed, Blocked, and Done columns.
+- Completed TASK-0303: structured task contract fields for goal, context, acceptance criteria, likely files, quality commands, security notes, done definition, and dependencies.
+- Added project-scoped task IPC authorization, delete dialog, FK-safe task deletion, and task validation tests.
+
+### Phase 6 (partial): Task-Linked Runs
+
+- Task board **Run in Terminal** opens a linked PTY session in the project folder.
+- Agent runs store `taskId` and generated implementation `prompt`.
+- Task status moves to **running** on launch and to **needs_review** or **failed** when the process exits.
+- Implementation prompts can be copied from the task detail panel or on launch.
 
 ### Product Discovery
 

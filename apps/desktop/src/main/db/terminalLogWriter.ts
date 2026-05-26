@@ -18,12 +18,16 @@ export class TerminalLogWriter {
     terminalSessionId: string;
     command: string;
     cwd: string;
+    taskId?: string;
+    prompt?: string;
   }): string {
     return startAgentRun({
       projectId: input.projectId,
       terminalSessionId: input.terminalSessionId,
       command: input.command,
-      cwd: input.cwd
+      cwd: input.cwd,
+      taskId: input.taskId,
+      prompt: input.prompt
     });
   }
 

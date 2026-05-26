@@ -3,7 +3,13 @@ import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
 import type { AgentRunStatus } from "../db/repositories/agentRunRepository.js";
 import { getProjectById } from "../db/repositories/projectRepository.js";
+import {
+  assertTaskBelongsToProject,
+  getTaskById,
+  setTaskStatus
+} from "../db/repositories/taskRepository.js";
 import type { TerminalLogWriter } from "../db/terminalLogWriter.js";
+import { buildImplementationPrompt } from "../../shared/buildTaskPrompt.js";
 import { isPathInsideRoot } from "../projects/projectPaths.js";
 import { redactSecrets } from "./logRedaction.js";
 import { normalizeTerminalSize, resolveShell, resolveTerminalCwd } from "./terminalConfig.js";
@@ -15,10 +21,13 @@ import type {
   TerminalWriteRequest
 } from "../../shared/terminalTypes.js";
 import type { ProjectSummary } from "../../shared/projectTypes.js";
+import type { TaskStatus } from "../../shared/taskTypes.js";
 
 interface TerminalSession {
   id: string;
   agentRunId: string;
+  projectId: string;
+  taskId: string | null;
   ownerWebContentsId: number;
   closingStatus?: AgentRunStatus;
   pty: IPty;
@@ -28,6 +37,9 @@ type ProjectResolver = (projectId?: string) => ProjectSummary | null;
 
 const resolveProjectFromDatabase: ProjectResolver = (projectId) =>
   projectId ? getProjectById(projectId) : null;
+
+const resolveTaskStatusAfterExit = (exitCode: number): TaskStatus =>
+  exitCode === 0 ? "needs_review" : "failed";
 
 export class TerminalSessionManager {
   private readonly sessions = new Map<string, TerminalSession>();
@@ -55,6 +67,23 @@ export class TerminalSessionManager {
       throw new Error("Selected project was not found.");
     }
 
+    let linkedTask = null;
+
+    if (request.taskId) {
+      assertTaskBelongsToProject(request.taskId, project.id);
+      linkedTask = getTaskById(request.taskId);
+
+      if (!linkedTask) {
+        throw new Error("Task was not found for this project.");
+      }
+
+      setTaskStatus({
+        projectId: project.id,
+        id: linkedTask.id,
+        status: "running"
+      });
+    }
+
     const cwd = resolveTerminalCwd(request.cwd, project.path);
 
     if (!isPathInsideRoot(project.path, cwd)) {
@@ -64,11 +93,14 @@ export class TerminalSessionManager {
     const size = normalizeTerminalSize(request.cols, request.rows);
     const shell = resolveShell(request.shell);
     const id = randomUUID();
+    const prompt = linkedTask ? buildImplementationPrompt(linkedTask, project.name) : undefined;
     const agentRunId = this.logWriter.startSession({
       projectId: project.id,
       terminalSessionId: id,
       command: shell,
-      cwd
+      cwd,
+      taskId: linkedTask?.id,
+      prompt
     });
 
     const pty = spawn(shell, [], {
@@ -82,6 +114,8 @@ export class TerminalSessionManager {
     this.sessions.set(id, {
       id,
       agentRunId,
+      projectId: project.id,
+      taskId: linkedTask?.id ?? null,
       ownerWebContentsId: webContents.id,
       pty
     });
@@ -105,6 +139,7 @@ export class TerminalSessionManager {
             : "failed";
 
       this.logWriter.endSession(id, agentRunId, status, exitCode);
+      this.syncTaskStatusAfterExit(session, exitCode);
       this.sessions.delete(id);
 
       if (!webContents.isDestroyed()) {
@@ -147,6 +182,24 @@ export class TerminalSessionManager {
       session.closingStatus = "killed";
       session.pty.kill();
     }
+  }
+
+  private syncTaskStatusAfterExit(session: TerminalSession | undefined, exitCode: number): void {
+    if (!session?.taskId) {
+      return;
+    }
+
+    const task = getTaskById(session.taskId);
+
+    if (!task || task.status !== "running") {
+      return;
+    }
+
+    setTaskStatus({
+      projectId: session.projectId,
+      id: session.taskId,
+      status: resolveTaskStatusAfterExit(exitCode)
+    });
   }
 
   private getOwnedSession(id: string, webContentsId: number): TerminalSession {

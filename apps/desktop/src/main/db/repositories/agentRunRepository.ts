@@ -10,6 +10,8 @@ export interface StartAgentRunInput {
   terminalSessionId: string;
   command: string;
   cwd: string;
+  taskId?: string;
+  prompt?: string;
 }
 
 export const startAgentRun = (input: StartAgentRunInput): string => {
@@ -20,11 +22,13 @@ export const startAgentRun = (input: StartAgentRunInput): string => {
   database.insert(agentRuns).values({
     id,
     projectId: input.projectId,
+    taskId: input.taskId ?? null,
     terminalSessionId: input.terminalSessionId,
     command: input.command,
+    prompt: input.prompt ?? null,
     status: "running",
     startedAt,
-    summary: `cwd: ${input.cwd}`
+    summary: input.taskId ? `task run · cwd: ${input.cwd}` : `cwd: ${input.cwd}`
   }).run();
 
   return id;

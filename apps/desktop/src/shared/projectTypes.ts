@@ -1,13 +1,8 @@
-export type PackageManager = "npm" | "pnpm" | "yarn" | "bun" | "unknown";
+import type { TaskStatus } from "./taskTypes.js";
 
-export type TaskStatus =
-  | "backlog"
-  | "ready"
-  | "running"
-  | "needs_review"
-  | "failed"
-  | "blocked"
-  | "done";
+export type { TaskStatus };
+
+export type PackageManager = "npm" | "pnpm" | "yarn" | "bun" | "unknown";
 
 export interface ProjectScript {
   name: string;
@@ -55,6 +50,8 @@ export interface AgentRunSummary {
   finishedAt: string | null;
   exitCode: number | null;
   summary: string | null;
+  taskId: string | null;
+  taskTitle: string | null;
 }
 
 export interface NextTaskSummary {

@@ -8,7 +8,7 @@ import type {
   TaskUpdateInput
 } from "../../../shared/taskTypes.js";
 import { getDatabase } from "../client.js";
-import { tasks } from "../schema.js";
+import { agentRuns, qualityChecks, tasks } from "../schema.js";
 
 const cleanText = (value: string | null): string => value ?? "";
 
@@ -26,9 +26,25 @@ const toTaskRecord = (task: typeof tasks.$inferSelect): TaskRecord => ({
   qualityCommands: cleanText(task.qualityCommands),
   securityNotes: cleanText(task.securityNotes),
   doneDefinition: cleanText(task.doneDefinition),
+  dependsOn: cleanText(task.dependsOn),
   createdAt: task.createdAt,
   updatedAt: task.updatedAt
 });
+
+export const getTaskById = (taskId: string): TaskRecord | null => {
+  const database = getDatabase();
+  const task = database.select().from(tasks).where(eq(tasks.id, taskId)).get();
+
+  return task ? toTaskRecord(task) : null;
+};
+
+export const assertTaskBelongsToProject = (taskId: string, projectId: string): void => {
+  const task = getTaskById(taskId);
+
+  if (!task || task.projectId !== projectId) {
+    throw new Error("Task was not found for this project.");
+  }
+};
 
 export const listTasks = (projectId: string): TaskRecord[] => {
   const database = getDatabase();
@@ -59,7 +75,7 @@ export const createTask = (input: TaskInput): TaskRecord => {
     qualityCommands: input.qualityCommands,
     securityNotes: input.securityNotes,
     doneDefinition: input.doneDefinition,
-    dependsOn: null,
+    dependsOn: input.dependsOn,
     createdAt: now,
     updatedAt: now
   };
@@ -70,6 +86,8 @@ export const createTask = (input: TaskInput): TaskRecord => {
 };
 
 export const updateTask = (input: TaskUpdateInput): TaskRecord => {
+  assertTaskBelongsToProject(input.id, input.projectId);
+
   const database = getDatabase();
   const updatedAt = new Date().toISOString();
 
@@ -87,21 +105,24 @@ export const updateTask = (input: TaskUpdateInput): TaskRecord => {
       qualityCommands: input.qualityCommands,
       securityNotes: input.securityNotes,
       doneDefinition: input.doneDefinition,
+      dependsOn: input.dependsOn,
       updatedAt
     })
     .where(eq(tasks.id, input.id))
     .run();
 
-  const task = database.select().from(tasks).where(eq(tasks.id, input.id)).get();
+  const task = getTaskById(input.id);
 
   if (!task) {
     throw new Error("Task was not found.");
   }
 
-  return toTaskRecord(task);
+  return task;
 };
 
 export const setTaskStatus = (input: TaskStatusUpdateInput): TaskRecord => {
+  assertTaskBelongsToProject(input.id, input.projectId);
+
   const database = getDatabase();
 
   database
@@ -113,16 +134,26 @@ export const setTaskStatus = (input: TaskStatusUpdateInput): TaskRecord => {
     .where(eq(tasks.id, input.id))
     .run();
 
-  const task = database.select().from(tasks).where(eq(tasks.id, input.id)).get();
+  const task = getTaskById(input.id);
 
   if (!task) {
     throw new Error("Task was not found.");
   }
 
-  return toTaskRecord(task);
+  return task;
 };
 
-export const deleteTask = (taskId: string): void => {
+export const deleteTask = (taskId: string, projectId: string): void => {
+  assertTaskBelongsToProject(taskId, projectId);
+
   const database = getDatabase();
-  database.delete(tasks).where(eq(tasks.id, taskId)).run();
+
+  database.update(agentRuns).set({ taskId: null }).where(eq(agentRuns.taskId, taskId)).run();
+  database.update(qualityChecks).set({ taskId: null }).where(eq(qualityChecks.taskId, taskId)).run();
+
+  const result = database.delete(tasks).where(eq(tasks.id, taskId)).run();
+
+  if (result.changes === 0) {
+    throw new Error("Task was not found.");
+  }
 };

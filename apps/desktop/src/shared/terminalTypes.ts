@@ -2,6 +2,7 @@ export type TerminalShell = "powershell" | "cmd";
 
 export interface CreateTerminalRequest {
   projectId: string;
+  taskId?: string;
   cwd?: string;
   cols?: number;
   rows?: number;
