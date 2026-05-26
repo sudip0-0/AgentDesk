@@ -1,5 +1,8 @@
 import { app, BrowserWindow, dialog, shell } from "electron";
 import { join } from "node:path";
+import { initializeDatabase, shutdownDatabase } from "./db/initDatabase.js";
+import { registerDatabaseIpc } from "./ipc/dbIpc.js";
+import { registerRunLogIpc } from "./ipc/runLogIpc.js";
 import { registerTerminalIpc, terminalSessionManager } from "./terminal/terminalIpc.js";
 
 let isQuitting = false;
@@ -71,6 +74,9 @@ const createMainWindow = (): BrowserWindow => {
 };
 
 app.whenReady().then(() => {
+  initializeDatabase();
+  registerDatabaseIpc();
+  registerRunLogIpc();
   registerTerminalIpc();
   createMainWindow();
 
@@ -83,6 +89,7 @@ app.whenReady().then(() => {
 
 app.on("before-quit", (event) => {
   if (isQuitting || !terminalSessionManager.hasActiveSessions()) {
+    shutdownDatabase();
     return;
   }
 
@@ -90,6 +97,7 @@ app.on("before-quit", (event) => {
 
   if (!window) {
     terminalSessionManager.killAll();
+    shutdownDatabase();
     return;
   }
 
@@ -98,6 +106,7 @@ app.on("before-quit", (event) => {
   if (confirmQuitWithActiveTerminals(window)) {
     isQuitting = true;
     terminalSessionManager.killAll();
+    shutdownDatabase();
     app.quit();
   }
 });

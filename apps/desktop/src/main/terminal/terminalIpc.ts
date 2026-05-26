@@ -1,4 +1,5 @@
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from "electron";
+import { terminalLogWriter } from "../db/initDatabase.js";
 import { TerminalSessionManager } from "./terminalSessionManager.js";
 import {
   createTerminalRequestSchema,
@@ -8,7 +9,7 @@ import {
   terminalWriteRequestSchema
 } from "./terminalValidation.js";
 
-export const terminalSessionManager = new TerminalSessionManager();
+export const terminalSessionManager = new TerminalSessionManager(terminalLogWriter);
 
 const sendTerminalError = (
   webContents: WebContents,

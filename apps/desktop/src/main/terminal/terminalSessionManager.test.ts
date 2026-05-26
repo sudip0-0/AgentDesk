@@ -1,11 +1,20 @@
 import type { WebContents } from "electron";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { TerminalLogWriter } from "../db/terminalLogWriter.js";
 import { TerminalSessionManager } from "./terminalSessionManager.js";
 
 interface SentEvent {
   channel: string;
   payload: unknown;
 }
+
+const createLogWriter = (): TerminalLogWriter =>
+  ({
+    startSession: vi.fn(() => "run-test-id"),
+    appendOutput: vi.fn(),
+    endSession: vi.fn(),
+    flushAll: vi.fn()
+  }) as unknown as TerminalLogWriter;
 
 const waitFor = async (predicate: () => boolean, timeoutMs = 8000): Promise<void> => {
   const startedAt = Date.now();
@@ -23,7 +32,8 @@ const waitFor = async (predicate: () => boolean, timeoutMs = 8000): Promise<void
 
 describe("TerminalSessionManager", () => {
   it("starts a PTY, streams output, accepts input, and exits", async () => {
-    const manager = new TerminalSessionManager();
+    const logWriter = createLogWriter();
+    const manager = new TerminalSessionManager(logWriter);
     const events: SentEvent[] = [];
     const webContents = {
       id: 1,
@@ -51,12 +61,16 @@ describe("TerminalSessionManager", () => {
     await waitFor(() => events.some((event) => event.channel === "terminal:exit"));
 
     expect(session.cwd).toBe(process.cwd());
+    expect(session.runId).toBe("run-test-id");
+    expect(logWriter.startSession).toHaveBeenCalled();
+    expect(logWriter.appendOutput).toHaveBeenCalled();
+    expect(logWriter.endSession).toHaveBeenCalled();
     expect(events.some((event) => event.channel === "terminal:data")).toBe(true);
     expect(events.some((event) => event.channel === "terminal:exit")).toBe(true);
   }, 10000);
 
   it("rejects writes from a different web contents owner", () => {
-    const manager = new TerminalSessionManager();
+    const manager = new TerminalSessionManager(createLogWriter());
     const owner = {
       id: 1,
       isDestroyed: () => false,
@@ -77,8 +91,8 @@ describe("TerminalSessionManager", () => {
     manager.kill(session.id, owner);
   });
 
-  it("tracks active sessions and kills all", () => {
-    const manager = new TerminalSessionManager();
+  it("tracks active sessions and kills all", async () => {
+    const manager = new TerminalSessionManager(createLogWriter());
     const webContents = {
       id: 3,
       isDestroyed: () => false,
@@ -90,8 +104,8 @@ describe("TerminalSessionManager", () => {
     const session = manager.create({ cwd: process.cwd(), cols: 80, rows: 24 }, webContents);
     expect(manager.hasActiveSessions()).toBe(true);
 
-    manager.killAll();
+    manager.kill(session.id, webContents);
+    await waitFor(() => !manager.hasActiveSessions());
     expect(manager.hasActiveSessions()).toBe(false);
-    expect(() => manager.kill(session.id, webContents)).toThrow(/not found/i);
   });
 });

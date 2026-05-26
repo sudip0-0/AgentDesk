@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
@@ -28,7 +29,7 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(rootDir, "apps/desktop/src/renderer"),
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     build: {
       rollupOptions: {
         input: resolve(rootDir, "apps/desktop/src/renderer/index.html")

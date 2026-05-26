@@ -10,6 +10,13 @@ import type {
   TerminalResizeRequest,
   TerminalWriteRequest
 } from "../shared/terminalTypes.js";
+import type { DatabaseHealth } from "../shared/dbTypes.js";
+import type {
+  ExportTerminalLogResult,
+  ListTerminalLogChunksRequest,
+  TerminalLogChunk,
+  TerminalLogMeta
+} from "../shared/runLogTypes.js";
 
 type TerminalDataListener = (event: TerminalDataEvent) => void;
 type TerminalExitListener = (event: TerminalExitEvent) => void;
@@ -34,7 +41,18 @@ const subscribe = <T>(
 const agentdeskApi: AgentDeskApi = {
   app: {
     getName: (): string => "AgentDesk",
-    getPhase: (): string => "Terminal Engine"
+    getPhase: (): string => "Foundation & Logs"
+  },
+  db: {
+    getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>
+  },
+  runs: {
+    getLogMeta: (runId: string): Promise<TerminalLogMeta> =>
+      ipcRenderer.invoke("runs:log-meta", { runId }) as Promise<TerminalLogMeta>,
+    listLogChunks: (request: ListTerminalLogChunksRequest): Promise<TerminalLogChunk[]> =>
+      ipcRenderer.invoke("runs:log-chunks", request) as Promise<TerminalLogChunk[]>,
+    exportLog: (runId: string): Promise<ExportTerminalLogResult> =>
+      ipcRenderer.invoke("runs:export-log", { runId }) as Promise<ExportTerminalLogResult>
   },
   terminals: {
     create: (request: CreateTerminalRequest): Promise<CreateTerminalResult> =>

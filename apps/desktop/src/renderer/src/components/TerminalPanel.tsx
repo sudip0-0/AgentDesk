@@ -7,6 +7,11 @@ import type {
   TerminalExitEvent,
   TerminalShell
 } from "../../../shared/terminalTypes";
+import { TranscriptPanel } from "./TranscriptPanel";
+import { Badge } from "./ui/Badge";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { cn } from "../lib/cn";
 import "@xterm/xterm/css/xterm.css";
 
 type TerminalStatus = "idle" | "starting" | "running" | "exited" | "error";
@@ -15,6 +20,7 @@ interface TerminalTab {
   id: string;
   title: string;
   sessionId: string | null;
+  runId: string | null;
   status: TerminalStatus;
   label: string;
   error: string | null;
@@ -33,6 +39,7 @@ const createTab = (title?: string): TerminalTab => {
     id: crypto.randomUUID(),
     title: title ?? `Terminal ${next}`,
     sessionId: null,
+    runId: null,
     status: "idle",
     label: "Not started",
     error: null
@@ -216,7 +223,10 @@ const TerminalTabPane = forwardRef<TerminalPaneHandle, TerminalTabPaneProps>(fun
 
   return (
     <div
-      className={isActive ? "terminal-tab-pane terminal-tab-pane-active" : "terminal-tab-pane"}
+      className={cn(
+        "absolute inset-2",
+        isActive ? "visible pointer-events-auto" : "invisible pointer-events-none"
+      )}
       ref={containerRef}
     />
   );
@@ -234,6 +244,7 @@ export function TerminalPanel(): React.JSX.Element {
   const [activeTabId, setActiveTabId] = useState<string>(initialState.current.activeId);
   const [cwd, setCwd] = useState("");
   const [shell, setShell] = useState<TerminalShell>("powershell");
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
   const paneRefs = useRef<Map<string, TerminalPaneHandle | null>>(new Map());
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
@@ -312,6 +323,7 @@ export function TerminalPanel(): React.JSX.Element {
 
       updateTab(activeTab.id, {
         sessionId: result.id,
+        runId: result.runId,
         status: "running",
         label: `${result.shell} in ${result.cwd}`,
         title: activeTab.title.startsWith("Terminal ") ? result.shell : activeTab.title
@@ -400,29 +412,52 @@ export function TerminalPanel(): React.JSX.Element {
     activeTab.status !== "starting" &&
     activeTab.status !== "running";
   const canKill = Boolean(activeTab?.sessionId);
+  const canViewTranscript = Boolean(activeTab?.runId);
+
+  const statusVariant = (status: TerminalStatus): "default" | "success" | "warning" | "danger" => {
+    if (status === "running") {
+      return "success";
+    }
+
+    if (status === "starting") {
+      return "warning";
+    }
+
+    if (status === "error") {
+      return "danger";
+    }
+
+    return "default";
+  };
 
   return (
-    <section className="terminal-panel" aria-label="Embedded terminal">
-      <div className="terminal-tab-bar" role="tablist" aria-label="Terminal tabs">
+    <section
+      className="grid h-[clamp(430px,calc(100vh-300px),720px)] min-h-[430px] gap-2.5 rounded-lg border border-border bg-panel p-3.5"
+      aria-label="Embedded terminal"
+    >
+      <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Terminal tabs">
         {tabs.map((tab) => (
           <div
-            className={tab.id === activeTabId ? "terminal-tab terminal-tab-active" : "terminal-tab"}
+            className={cn(
+              "flex items-stretch overflow-hidden rounded-md border bg-[#10161d]",
+              tab.id === activeTabId ? "border-accent/50 bg-panel-strong" : "border-border"
+            )}
             key={tab.id}
             role="presentation"
           >
             <button
               aria-selected={tab.id === activeTabId}
-              className="terminal-tab-button"
+              className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-bold text-muted hover:text-text"
               onClick={() => setActiveTabId(tab.id)}
               role="tab"
               type="button"
             >
-              <span className="terminal-tab-title">{tab.title}</span>
-              {tab.sessionId ? <span className="terminal-tab-dot" aria-hidden /> : null}
+              <span className="max-w-[140px] truncate">{tab.title}</span>
+              {tab.sessionId ? <span className="size-1.5 rounded-full bg-accent" aria-hidden /> : null}
             </button>
             <button
               aria-label={`Close ${tab.title}`}
-              className="terminal-tab-close"
+              className="border-l border-border px-2 text-muted hover:text-text"
               onClick={() => void closeTab(tab.id)}
               type="button"
             >
@@ -430,52 +465,62 @@ export function TerminalPanel(): React.JSX.Element {
             </button>
           </div>
         ))}
-        <button className="terminal-tab-add" onClick={addTab} type="button">
+        <Button onClick={addTab} size="sm" variant="ghost">
           + New tab
-        </button>
+        </Button>
       </div>
 
-      <div className="terminal-toolbar">
-        <label className="cwd-field">
-          <span>Working directory</span>
-          <input
-            onChange={(event) => setCwd(event.target.value)}
-            placeholder="Blank uses your home folder"
-            type="text"
-            value={cwd}
-          />
-        </label>
+      <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_160px_auto]">
+        <Input
+          label="Working directory"
+          onChange={(event) => setCwd(event.target.value)}
+          placeholder="Blank uses your home folder"
+          value={cwd}
+        />
 
-        <label className="shell-field">
-          <span>Shell</span>
-          <select onChange={(event) => setShell(event.target.value as TerminalShell)} value={shell}>
+        <label className="grid gap-1.5">
+          <span className="text-xs font-bold text-muted">Shell</span>
+          <select
+            className="w-full rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text"
+            onChange={(event) => setShell(event.target.value as TerminalShell)}
+            value={shell}
+          >
             <option value="powershell">PowerShell</option>
             <option value="cmd">CMD</option>
           </select>
         </label>
 
-        <div className="terminal-actions">
-          <button disabled={!canStart} onClick={() => void startTerminal()} type="button">
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={!canStart} onClick={() => void startTerminal()} variant="primary">
             Start
-          </button>
-          <button disabled={!canKill} onClick={() => void killTerminal()} type="button">
+          </Button>
+          <Button disabled={!canKill} onClick={() => void killTerminal()} variant="danger">
             Kill
-          </button>
+          </Button>
+          <Button
+            disabled={!canViewTranscript}
+            onClick={() => setTranscriptOpen(true)}
+            variant="secondary"
+          >
+            Transcript
+          </Button>
         </div>
       </div>
 
       {activeTab ? (
-        <div className="terminal-meta">
-          <span className={`terminal-state terminal-state-${activeTab.status}`}>
-            {activeTab.status}
-          </span>
-          <span>{activeTab.label}</span>
+        <div className="flex min-w-0 items-center gap-2 text-xs text-muted">
+          <Badge variant={statusVariant(activeTab.status)}>{activeTab.status}</Badge>
+          <span className="truncate">{activeTab.label}</span>
         </div>
       ) : null}
 
-      {activeTab?.error ? <div className="terminal-error">{activeTab.error}</div> : null}
+      {activeTab?.error ? (
+        <div className="rounded-md border border-danger/45 bg-danger/10 px-2.5 py-2 text-sm text-[#ffd0d0]">
+          {activeTab.error}
+        </div>
+      ) : null}
 
-      <div className="terminal-frame">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-[#28313b] bg-[#0d1117] p-2">
         {tabs.map((tab) => (
           <TerminalTabPane
             isActive={tab.id === activeTabId}
@@ -485,6 +530,11 @@ export function TerminalPanel(): React.JSX.Element {
           />
         ))}
       </div>
+      <TranscriptPanel
+        onClose={() => setTranscriptOpen(false)}
+        open={transcriptOpen}
+        runId={activeTab?.runId ?? null}
+      />
     </section>
   );
 }

@@ -61,7 +61,7 @@ npm run build
 
 ### TASK-0102: Add Tailwind CSS and Base UI System
 
-Status: backlog
+Status: done
 
 Goal:
 Set up Tailwind CSS and create basic reusable UI components.
@@ -78,7 +78,7 @@ Acceptance Criteria:
 
 ### TASK-0103: Add Local SQLite Database
 
-Status: backlog
+Status: done
 
 Goal:
 Add SQLite local database for storing projects, tasks, agent profiles, runs, and logs.
@@ -299,7 +299,7 @@ Acceptance Criteria:
 
 ### TASK-0503: Save Terminal Logs
 
-Status: backlog
+Status: done
 
 Goal:
 Save terminal output to database per run.

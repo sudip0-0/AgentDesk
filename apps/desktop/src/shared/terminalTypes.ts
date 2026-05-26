@@ -9,6 +9,7 @@ export interface CreateTerminalRequest {
 
 export interface CreateTerminalResult {
   id: string;
+  runId: string;
   cwd: string;
   shell: string;
 }

@@ -35,6 +35,9 @@ AgentDesk MVP is a Windows desktop app that can:
 - Added an xterm.js renderer panel with working-directory selection, terminal input, streamed output, resize forwarding, kill action, and visible error state.
 - Added multi-tab terminal UI, PowerShell/CMD shell selection, IPC validation, secret redaction on streamed output, and close confirmation when sessions are active.
 - Added terminal tests for default shell sizing logic and PTY session startup/output/exit behavior.
+- Completed TASK-0103: SQLite database in app data with Drizzle schema, repeatable migrations, and health probe read/write.
+- Completed TASK-0503: chunked terminal log persistence per agent run, paginated transcript viewer, and export.
+- Completed TASK-0102: Tailwind CSS v4 with reusable Button, Card, Input, Dialog, Tabs, and Badge components.
 
 ### Product Discovery
 
@@ -77,9 +80,9 @@ None.
 
 Next focused tasks:
 
-1. TASK-0503: Save Terminal Logs.
-3. TASK-0102: Add Tailwind CSS and Base UI System.
-4. TASK-0103: Add Local SQLite Database.
+1. TASK-0201: Implement Project Folder Picker.
+2. TASK-0202: Detect Project Metadata.
+3. TASK-0301: Create Task CRUD.
 
 ## Current Risks
 
