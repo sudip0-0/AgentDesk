@@ -11,6 +11,7 @@ export interface StartAgentRunInput {
   command: string;
   cwd: string;
   taskId?: string;
+  agentProfileId?: string;
   prompt?: string;
 }
 
@@ -23,6 +24,7 @@ export const startAgentRun = (input: StartAgentRunInput): string => {
     id,
     projectId: input.projectId,
     taskId: input.taskId ?? null,
+    agentProfileId: input.agentProfileId ?? null,
     terminalSessionId: input.terminalSessionId,
     command: input.command,
     prompt: input.prompt ?? null,

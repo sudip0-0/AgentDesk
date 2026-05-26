@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { AgentDeskApi } from "../shared/agentdeskApi.js";
 import type {
+  AgentProfileDeleteInput,
+  AgentProfileInput,
+  AgentProfileRecord,
+  AgentProfileUpdateInput
+} from "../shared/agentProfileTypes.js";
+import type {
   CreateTerminalRequest,
   CreateTerminalResult,
   TerminalActivityEvent,
@@ -52,7 +58,7 @@ const subscribe = <T>(
 const agentdeskApi: AgentDeskApi = {
   app: {
     getName: (): string => "AgentDesk",
-    getPhase: (): string => "Prompt Engine"
+    getPhase: (): string => "Agent Profiles"
   },
   db: {
     getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>
@@ -76,6 +82,16 @@ const agentdeskApi: AgentDeskApi = {
       ipcRenderer.invoke("task:set-status", input) as Promise<TaskRecord>,
     delete: (input: TaskDeleteInput): Promise<void> =>
       ipcRenderer.invoke("task:delete", input) as Promise<void>
+  },
+  agentProfiles: {
+    list: (): Promise<AgentProfileRecord[]> =>
+      ipcRenderer.invoke("agent-profile:list") as Promise<AgentProfileRecord[]>,
+    create: (input: AgentProfileInput): Promise<AgentProfileRecord> =>
+      ipcRenderer.invoke("agent-profile:create", input) as Promise<AgentProfileRecord>,
+    update: (input: AgentProfileUpdateInput): Promise<AgentProfileRecord> =>
+      ipcRenderer.invoke("agent-profile:update", input) as Promise<AgentProfileRecord>,
+    delete: (input: AgentProfileDeleteInput): Promise<void> =>
+      ipcRenderer.invoke("agent-profile:delete", input) as Promise<void>
   },
   runs: {
     getLogMeta: (request: RunLogRequest): Promise<TerminalLogMeta> =>

@@ -7,6 +7,7 @@ export type { TerminalActivityState };
 export interface CreateTerminalRequest {
   projectId: string;
   taskId?: string;
+  agentProfileId?: string;
   cwd?: string;
   cols?: number;
   rows?: number;

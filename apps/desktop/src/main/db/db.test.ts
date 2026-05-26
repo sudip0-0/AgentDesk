@@ -6,9 +6,15 @@ import { closeDatabase } from "./client.js";
 import { checkDatabaseHealth } from "./health.js";
 import { runMigrations } from "./migrate.js";
 import { setDatabasePathForTests } from "./paths.js";
-import { ensureDefaultProject } from "./seed.js";
+import { ensureDefaultData, ensureDefaultProject } from "./seed.js";
 import { openProjectFromPath } from "./repositories/projectRepository.js";
 import { startAgentRun, finishAgentRun } from "./repositories/agentRunRepository.js";
+import {
+  createAgentProfile,
+  deleteAgentProfile,
+  listAgentProfiles,
+  updateAgentProfile
+} from "./repositories/agentProfileRepository.js";
 import {
   createTask,
   deleteTask,
@@ -48,7 +54,7 @@ describe("database", () => {
     runMigrations(sqlite);
 
     const rows = sqlite.prepare("SELECT id FROM schema_migrations").all() as { id: string }[];
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     sqlite.close();
   });
 
@@ -133,5 +139,38 @@ describe("database", () => {
 
     deleteTask(task.id, project.id);
     expect(listTasks(project.id)).toHaveLength(0);
+  });
+
+  it("seeds and manages agent profiles", () => {
+    ensureDefaultData();
+    const seededProfiles = listAgentProfiles();
+    expect(seededProfiles.map((profile) => profile.name)).toEqual(
+      expect.arrayContaining(["Codex", "OpenCode", "Kiro CLI", "Devin CLI", "Claude Code", "Custom Command"])
+    );
+
+    const created = createAgentProfile({
+      name: "Local Agent",
+      command: "local-agent",
+      argsTemplate: "--prompt {{prompt}}",
+      shell: "powershell",
+      mode: "one_shot",
+      envText: "LOCAL_AGENT=1",
+      workingDirectoryBehavior: "project_root",
+      promptDelivery: "argument"
+    });
+
+    expect(created.envText).toBe("LOCAL_AGENT=1");
+
+    const updated = updateAgentProfile({
+      ...created,
+      name: "Local Agent Updated",
+      promptDelivery: "send_to_stdin"
+    });
+
+    expect(updated.name).toBe("Local Agent Updated");
+    expect(updated.promptDelivery).toBe("send_to_stdin");
+
+    deleteAgentProfile(updated.id);
+    expect(listAgentProfiles().some((profile) => profile.id === updated.id)).toBe(false);
   });
 });

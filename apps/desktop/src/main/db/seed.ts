@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { DEFAULT_PROJECT_ID } from "./constants.js";
 import { getDatabase } from "./client.js";
 import { projects } from "./schema.js";
+import { ensureDefaultAgentProfiles } from "./repositories/agentProfileRepository.js";
 
 export const ensureDefaultProject = (): void => {
   const database = getDatabase();
@@ -26,4 +27,9 @@ export const ensureDefaultProject = (): void => {
     createdAt: now,
     updatedAt: now
   }).run();
+};
+
+export const ensureDefaultData = (): void => {
+  ensureDefaultProject();
+  ensureDefaultAgentProfiles();
 };

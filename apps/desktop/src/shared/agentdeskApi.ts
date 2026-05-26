@@ -1,4 +1,10 @@
 import type { DatabaseHealth } from "./dbTypes.js";
+import type {
+  AgentProfileDeleteInput,
+  AgentProfileInput,
+  AgentProfileRecord,
+  AgentProfileUpdateInput
+} from "./agentProfileTypes.js";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "./projectTypes.js";
 import type {
   ExportTerminalLogResult,
@@ -47,6 +53,12 @@ export interface AgentDeskApi {
     update: (input: TaskUpdateInput) => Promise<TaskRecord>;
     setStatus: (input: TaskStatusUpdateInput) => Promise<TaskRecord>;
     delete: (input: TaskDeleteInput) => Promise<void>;
+  };
+  agentProfiles: {
+    list: () => Promise<AgentProfileRecord[]>;
+    create: (input: AgentProfileInput) => Promise<AgentProfileRecord>;
+    update: (input: AgentProfileUpdateInput) => Promise<AgentProfileRecord>;
+    delete: (input: AgentProfileDeleteInput) => Promise<void>;
   };
   runs: {
     getLogMeta: (request: RunLogRequest) => Promise<TerminalLogMeta>;

@@ -5,6 +5,7 @@ const terminalSizeSchema = z.number().int().min(1).max(500);
 export const createTerminalRequestSchema = z.object({
   projectId: z.string().uuid(),
   taskId: z.string().uuid().optional(),
+  agentProfileId: z.string().uuid().optional(),
   cwd: z.string().max(4096).optional(),
   cols: terminalSizeSchema.optional(),
   rows: terminalSizeSchema.optional(),

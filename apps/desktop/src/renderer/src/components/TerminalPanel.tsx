@@ -345,7 +345,11 @@ export function TerminalPanel({
     });
   };
 
-  const startTerminal = useCallback(async (options?: { tabId?: string; taskId?: string }): Promise<void> => {
+  const startTerminal = useCallback(async (options?: {
+    tabId?: string;
+    taskId?: string;
+    agentProfileId?: string;
+  }): Promise<void> => {
     const currentTabs = tabsRef.current;
     const currentActive =
       currentTabs.find((entry) => entry.id === activeTabId) ?? currentTabs[0];
@@ -367,6 +371,7 @@ export function TerminalPanel({
       const result = await window.agentdesk.terminals.create({
         projectId: project.id,
         taskId: options?.taskId,
+        agentProfileId: options?.agentProfileId,
         cwd,
         shell,
         cols: size.cols,
@@ -517,7 +522,11 @@ export function TerminalPanel({
         return;
       }
 
-      await startTerminal({ tabId: tab.id, taskId: launchRequest.task.id });
+      await startTerminal({
+        tabId: tab.id,
+        taskId: launchRequest.task.id,
+        agentProfileId: launchRequest.agentProfileId
+      });
     };
 
     void launchTaskTerminal();

@@ -1,7 +1,9 @@
 import type { WebContents } from "electron";
 import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
+import { buildAgentCommandPreview } from "../../shared/agentCommandBuilder.js";
 import type { AgentRunStatus } from "../db/repositories/agentRunRepository.js";
+import { getAgentProfileById } from "../db/repositories/agentProfileRepository.js";
 import { getProjectById } from "../db/repositories/projectRepository.js";
 import {
   assertTaskBelongsToProject,
@@ -34,6 +36,7 @@ interface TerminalSession {
   agentRunId: string;
   projectId: string;
   taskId: string | null;
+  agentProfileId: string | null;
   ownerWebContentsId: number;
   activityState: TerminalActivityState;
   outputTail: string;
@@ -92,31 +95,48 @@ export class TerminalSessionManager {
       });
     }
 
-    const cwd = resolveTerminalCwd(request.cwd, project.path);
+    const profile = request.agentProfileId ? getAgentProfileById(request.agentProfileId) : null;
+
+    if (request.agentProfileId && !profile) {
+      throw new Error("Agent profile was not found.");
+    }
+
+    const requestedCwd = profile?.workingDirectoryBehavior === "project_root" ? undefined : request.cwd;
+    const cwd = resolveTerminalCwd(requestedCwd, project.path);
 
     if (!isPathInsideRoot(project.path, cwd)) {
       throw new Error("Working directory must be inside the selected project folder.");
     }
 
     const size = normalizeTerminalSize(request.cols, request.rows);
-    const shell = resolveShell(request.shell);
     const id = randomUUID();
     const prompt = linkedTask ? buildPrompt("implementation", { project, task: linkedTask }) : undefined;
+    const shell = resolveShell(request.shell);
+    const command = profile && linkedTask && prompt
+      ? buildAgentCommandPreview(profile, { project, task: linkedTask, prompt, cwd })
+      : null;
+    const executable = command?.executable ?? shell;
+    const args = command?.args ?? [];
+    const displayCommand = command?.displayCommand ?? shell;
     const agentRunId = this.logWriter.startSession({
       projectId: project.id,
       terminalSessionId: id,
-      command: shell,
+      command: displayCommand,
       cwd,
       taskId: linkedTask?.id,
+      agentProfileId: profile?.id,
       prompt
     });
 
-    const pty = spawn(shell, [], {
+    const pty = spawn(executable, args, {
       name: "xterm-256color",
       cols: size.cols,
       rows: size.rows,
       cwd,
-      env: process.env
+      env: {
+        ...process.env,
+        ...command?.env
+      }
     });
 
     this.sessions.set(id, {
@@ -124,11 +144,20 @@ export class TerminalSessionManager {
       agentRunId,
       projectId: project.id,
       taskId: linkedTask?.id ?? null,
+      agentProfileId: profile?.id ?? null,
       ownerWebContentsId: webContents.id,
       activityState: "busy",
       outputTail: "",
       pty
     });
+
+    if (command?.promptWillBeSentToStdin && prompt) {
+      setTimeout(() => {
+        if (this.sessions.has(id)) {
+          pty.write(`${prompt}\r`);
+        }
+      }, 500);
+    }
 
     pty.onData((data) => {
       const redacted = redactSecrets(data);
@@ -165,7 +194,7 @@ export class TerminalSessionManager {
       }
     });
 
-    return { id, runId: agentRunId, cwd, shell };
+    return { id, runId: agentRunId, cwd, shell: profile?.name ?? shell };
   }
 
   public write(request: TerminalWriteRequest, webContents: WebContents): void {

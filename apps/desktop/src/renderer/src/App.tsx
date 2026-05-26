@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import type { AgentProfileRecord } from "../../shared/agentProfileTypes";
 import type { DatabaseHealth } from "../../shared/dbTypes";
 import type { PromptSendRequest } from "../../shared/promptSendTypes";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../shared/projectTypes";
 import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
 import type { TaskRecord } from "../../shared/taskTypes";
+import { AgentProfilesPanel } from "./components/AgentProfilesPanel";
 import { TaskBoard } from "./components/TaskBoard";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { Badge } from "./components/ui/Badge";
@@ -16,6 +18,7 @@ const navItems = [
   { id: "projects", label: "Projects" },
   { id: "terminal", label: "Terminal" },
   { id: "tasks", label: "Tasks" },
+  { id: "agents", label: "Agents" },
   { id: "runs", label: "Runs" },
   { id: "settings", label: "Settings" }
 ];
@@ -154,7 +157,7 @@ export function App(): React.JSX.Element {
       <div className="grid min-w-0 grid-rows-[auto_1fr]">
         <header className="flex items-center justify-between gap-4 border-b border-border bg-[#151b22] px-6 py-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 4</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 6</span>
             <h1 className="mt-1 text-xl font-bold text-text">{phase}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -243,12 +246,17 @@ export function App(): React.JSX.Element {
 
           {activeNav === "tasks" ? (
             <TaskBoard
-              onLaunchInTerminal={(task: TaskRecord) => {
+              onLaunchInTerminal={(task: TaskRecord, agentProfile?: AgentProfileRecord) => {
                 if (!activeProject) {
                   return;
                 }
 
-                setTerminalLaunch({ projectId: activeProject.id, task });
+                setTerminalLaunch({
+                  projectId: activeProject.id,
+                  task,
+                  agentProfileId: agentProfile?.id,
+                  agentProfileName: agentProfile?.name
+                });
                 setActiveNav("terminal");
               }}
               onSendPromptToTerminal={(request: PromptSendRequest) => {
@@ -259,6 +267,8 @@ export function App(): React.JSX.Element {
               project={activeProject}
             />
           ) : null}
+
+          {activeNav === "agents" ? <AgentProfilesPanel /> : null}
 
           <section className="grid gap-3 md:grid-cols-3">
             <Card>
@@ -284,7 +294,7 @@ export function App(): React.JSX.Element {
             </Card>
           </section>
 
-          {activeNav !== "terminal" && activeNav !== "projects" && activeNav !== "tasks" ? (
+          {activeNav !== "terminal" && activeNav !== "projects" && activeNav !== "tasks" && activeNav !== "agents" ? (
             <Card className={cn("border-dashed")}>
               <CardTitle>{navItems.find((item) => item.id === activeNav)?.label}</CardTitle>
               <CardDescription>This screen is planned for a later phase.</CardDescription>

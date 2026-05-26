@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, and Phase 5 terminal engine are complete. Full README MVP criteria are not done yet (agent profiles, quality runner, git UI).
+Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, Phase 5 terminal engine, and Phase 6 agent profiles are complete. Full README MVP criteria are not done yet (quality runner, git UI).
 
 ## MVP Definition
 
@@ -15,7 +15,7 @@ Target MVP capabilities (see README.md):
 | Open a local project | Done |
 | Create and manage tasks | Done |
 | Generate prompts | Done |
-| Launch CLI agents in embedded terminals | Partial (terminals work; task-linked runs and prompts work; agent profiles pending) |
+| Launch CLI agents in embedded terminals | Done |
 | Save run logs | Done |
 | Run quality checks | Not started (Phase 7) |
 | Show git status and diffs | Not started (Phase 8) |
@@ -64,12 +64,15 @@ Target MVP capabilities (see README.md):
 - Completed TASK-0403: review and fix prompts available alongside test and security prompts.
 - Added prompt preview UI, copy prompt action, fix-context field for failed checks, send confirmation for long prompts, and clipboard-first line-by-line terminal delivery.
 
-### Phase 6 (partial): Task-Linked Runs
+### Phase 6: Agent Profiles
 
-- Task board **Run in Terminal** opens a linked PTY session in the project folder.
-- Agent runs store `taskId` and generated implementation `prompt`.
+- Completed TASK-0601: agent profile model with command, args template, shell, mode, environment variables, working-directory behavior, and prompt delivery.
+- Completed TASK-0602: default profiles for Codex, OpenCode, Kiro CLI, Devin CLI, Claude Code, and Custom Command.
+- Completed TASK-0603: task launch flow with selected profile, command preview, confirmation, linked run creation, PTY launch, prompt delivery, logs, and task status lifecycle.
+- Task board **Launch Agent** opens a linked PTY session in the project folder.
+- Agent runs store `taskId`, `agentProfileId`, command preview, and generated implementation `prompt`.
 - Task status moves to **running** on launch and to **needs_review** or **failed** when the process exits.
-- Implementation prompts can be copied from the task detail panel or on launch.
+- Agent profiles can be created, edited, and deleted from the Agents screen.
 
 ### Product Discovery
 
@@ -112,9 +115,9 @@ None.
 
 Next focused tasks:
 
-1. TASK-0601: Create Agent Profile Data Model.
-2. TASK-0602: Add Default Agent Profiles.
-3. TASK-0603: Launch Agent from Task.
+1. TASK-0701: Configure Quality Commands.
+2. TASK-0702: Run Quality Checks.
+3. TASK-0703: Create Fix Task from Failed Check.
 
 ## Current Risks
 

@@ -41,6 +41,8 @@ export const agentProfiles = sqliteTable("agent_profiles", {
   mode: text("mode").notNull(),
   shell: text("shell"),
   envJson: text("env_json"),
+  workingDirectoryBehavior: text("working_directory_behavior").notNull().default("project_root"),
+  promptDelivery: text("prompt_delivery").notNull().default("send_to_stdin"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull()
 });

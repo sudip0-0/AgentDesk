@@ -1,6 +1,7 @@
 import type { Database as SqliteDatabase } from "better-sqlite3";
 import { INITIAL_MIGRATION_SQL } from "./migrations/0001_initial.js";
 import { TASK_CONTRACT_FIELDS_MIGRATION_SQL } from "./migrations/0002_task_contract_fields.js";
+import { AGENT_PROFILE_LAUNCH_FIELDS_MIGRATION_SQL } from "./migrations/0003_agent_profile_launch_fields.js";
 
 const migrations = [
   {
@@ -10,6 +11,10 @@ const migrations = [
   {
     id: "0002_task_contract_fields",
     sql: TASK_CONTRACT_FIELDS_MIGRATION_SQL
+  },
+  {
+    id: "0003_agent_profile_launch_fields",
+    sql: AGENT_PROFILE_LAUNCH_FIELDS_MIGRATION_SQL
   }
 ];
 

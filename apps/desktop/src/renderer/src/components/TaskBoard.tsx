@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { buildAgentCommandPreview } from "../../../shared/agentCommandBuilder";
+import type { AgentProfileRecord } from "../../../shared/agentProfileTypes";
 import {
   buildPrompt,
   createPromptContext,
@@ -52,7 +54,7 @@ const emptyTaskInput = (projectId: string): TaskInput => ({
 interface TaskBoardProps {
   project: ProjectSummary | null;
   onTasksChanged: () => void;
-  onLaunchInTerminal: (task: TaskRecord) => void;
+  onLaunchInTerminal: (task: TaskRecord, agentProfile?: AgentProfileRecord) => void;
   onSendPromptToTerminal: (request: PromptSendRequest) => void;
 }
 
@@ -74,6 +76,8 @@ export function TaskBoard({
   const [selectedTemplateId, setSelectedTemplateId] = useState<PromptTemplateId>("implementation");
   const [fixContext, setFixContext] = useState("");
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  const [agentProfiles, setAgentProfiles] = useState<AgentProfileRecord[]>([]);
+  const [selectedAgentProfileId, setSelectedAgentProfileId] = useState("");
   const [pendingSend, setPendingSend] = useState<{
     task: TaskRecord;
     templateId: PromptTemplateId;
@@ -146,6 +150,30 @@ export function TaskBoard({
 
     void loadTasks(project.id);
   }, [project]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void window.agentdesk.agentProfiles
+      .list()
+      .then((profiles: AgentProfileRecord[]) => {
+        if (cancelled) {
+          return;
+        }
+
+        setAgentProfiles(profiles);
+        setSelectedAgentProfileId((current) => current || profiles[0]?.id || "");
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAgentProfiles([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setFixContext("");
@@ -371,11 +399,32 @@ export function TaskBoard({
         onDelete={() => setDeleteConfirmOpen(true)}
         onEdit={openEditDialog}
         onFixContextChange={setFixContext}
-        onLaunchInTerminal={onLaunchInTerminal}
+        agentProfiles={agentProfiles}
+        onLaunchInTerminal={(task, profile) => {
+          if (!profile || !project) {
+            onLaunchInTerminal(task);
+            return;
+          }
+
+          const prompt = buildTaskPrompt(task, "implementation");
+          const preview = buildAgentCommandPreview(profile, {
+            project,
+            task,
+            prompt,
+            cwd: project.path
+          });
+          const confirmed = window.confirm(`Launch ${profile.name}?\n\n${preview.displayCommand}`);
+
+          if (confirmed) {
+            onLaunchInTerminal(task, profile);
+          }
+        }}
         onSendPromptToTerminal={requestSendPrompt}
         onStatusChange={(taskId, status) => void changeStatus(taskId, status)}
         project={project}
+        selectedAgentProfileId={selectedAgentProfileId}
         selectedTemplateId={selectedTemplateId}
+        setSelectedAgentProfileId={setSelectedAgentProfileId}
         setSelectedTemplateId={setSelectedTemplateId}
         task={selectedTask}
       />
@@ -458,25 +507,31 @@ function TaskDetailPanel({
   onEdit,
   onDelete,
   fixContext,
+  agentProfiles,
   onCopyPrompt,
   onFixContextChange,
   onLaunchInTerminal,
   onSendPromptToTerminal,
   onStatusChange,
+  selectedAgentProfileId,
   selectedTemplateId,
+  setSelectedAgentProfileId,
   setSelectedTemplateId
 }: {
   task: TaskRecord | null;
   project: ProjectSummary;
   fixContext: string;
+  agentProfiles: AgentProfileRecord[];
   onEdit: (task: TaskRecord) => void;
   onDelete: () => void;
   onCopyPrompt: (task: TaskRecord, templateId: PromptTemplateId) => void;
   onFixContextChange: (value: string) => void;
-  onLaunchInTerminal: (task: TaskRecord) => void;
+  onLaunchInTerminal: (task: TaskRecord, profile?: AgentProfileRecord) => void;
   onSendPromptToTerminal: (task: TaskRecord, templateId: PromptTemplateId) => void;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
+  selectedAgentProfileId: string;
   selectedTemplateId: PromptTemplateId;
+  setSelectedAgentProfileId: (profileId: string) => void;
   setSelectedTemplateId: (templateId: PromptTemplateId) => void;
 }): React.JSX.Element {
   if (!task) {
@@ -496,6 +551,17 @@ function TaskDetailPanel({
       fixContext: selectedTemplateId === "fix" ? fixContext : undefined
     })
   );
+  const selectedAgentProfile =
+    agentProfiles.find((profile) => profile.id === selectedAgentProfileId) ?? agentProfiles[0] ?? null;
+  const commandPreview =
+    selectedAgentProfile
+      ? buildAgentCommandPreview(selectedAgentProfile, {
+          project,
+          task,
+          prompt: buildPrompt("implementation", createPromptContext(project, task)),
+          cwd: project.path
+        })
+      : null;
 
   return (
     <aside className="grid content-start gap-3">
@@ -524,8 +590,12 @@ function TaskDetailPanel({
         </label>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={() => onLaunchInTerminal(task)} variant="primary">
-            Run in Terminal
+          <Button
+            disabled={agentProfiles.length === 0}
+            onClick={() => onLaunchInTerminal(task, selectedAgentProfile ?? undefined)}
+            variant="primary"
+          >
+            Launch Agent
           </Button>
           <Button onClick={() => onEdit(task)} variant="secondary">
             Edit
@@ -535,9 +605,36 @@ function TaskDetailPanel({
           </Button>
         </div>
         <p className="mt-2 text-xs text-muted">
-          Run in Terminal links this task to the session, sets status to Running, and copies the
+          Launch Agent links this task to the session, sets status to Running, and stores the
           implementation prompt for {project.name}.
         </p>
+      </Card>
+
+      <Card>
+        <CardTitle>Agent Launch</CardTitle>
+        <CardDescription>Select a profile and confirm the command before launching.</CardDescription>
+        <label className="mt-4 grid gap-1.5">
+          <span className="text-xs font-bold text-muted">Agent Profile</span>
+          <select
+            className="rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+            onChange={(event) => setSelectedAgentProfileId(event.target.value)}
+            value={selectedAgentProfile?.id ?? ""}
+          >
+            {agentProfiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+          {commandPreview?.displayCommand ?? "No agent profiles configured."}
+        </pre>
+        {commandPreview ? (
+          <p className="mt-2 text-xs text-muted">
+            Working directory: {commandPreview.cwd}. Prompt delivery: {commandPreview.promptDelivery}.
+          </p>
+        ) : null}
       </Card>
 
       <Card>

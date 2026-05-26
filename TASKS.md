@@ -318,7 +318,7 @@ Acceptance Criteria:
 
 ### TASK-0601: Create Agent Profile Data Model
 
-Status: backlog
+Status: done
 
 Goal:
 Allow users to define CLI agent tools.
@@ -339,7 +339,7 @@ Profile fields:
 
 ### TASK-0602: Add Default Agent Profiles
 
-Status: backlog
+Status: done
 
 Goal:
 Provide default profiles for common tools.
@@ -361,7 +361,7 @@ Each profile can be edited by the user.
 
 ### TASK-0603: Launch Agent from Task
 
-Status: in progress
+Status: done
 
 Goal:
 Run a selected task with a selected agent profile.
@@ -369,8 +369,8 @@ Run a selected task with a selected agent profile.
 Acceptance Criteria:
 
 - User selects task.
-- User selects agent. (Agent profiles pending — uses shell terminal for now.)
-- App builds command. (Shell launch for now; agent adapters pending.)
+- User selects agent.
+- App builds command.
 - App launches terminal session in project folder.
 - Run is linked to task.
 - Prompt is copied or sent depending on profile mode.

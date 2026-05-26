@@ -19,6 +19,7 @@ export class TerminalLogWriter {
     command: string;
     cwd: string;
     taskId?: string;
+    agentProfileId?: string;
     prompt?: string;
   }): string {
     return startAgentRun({
@@ -27,6 +28,7 @@ export class TerminalLogWriter {
       command: input.command,
       cwd: input.cwd,
       taskId: input.taskId,
+      agentProfileId: input.agentProfileId,
       prompt: input.prompt
     });
   }
