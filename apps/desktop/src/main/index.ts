@@ -4,6 +4,7 @@ import { initializeDatabase, shutdownDatabase } from "./db/initDatabase.js";
 import { registerAgentProfileIpc } from "./agents/agentProfileIpc.js";
 import { registerDatabaseIpc } from "./ipc/dbIpc.js";
 import { registerRunLogIpc } from "./ipc/runLogIpc.js";
+import { registerRunDetailIpc } from "./runs/runDetailIpc.js";
 import { registerProjectIpc } from "./projects/projectIpc.js";
 import { registerQualityIpc } from "./quality/qualityIpc.js";
 import { registerTaskIpc } from "./tasks/taskIpc.js";
@@ -89,6 +90,7 @@ app.whenReady().then(() => {
   registerQualityIpc();
   registerTaskIpc();
   registerRunLogIpc();
+  registerRunDetailIpc();
   registerTerminalIpc();
   createMainWindow();
 

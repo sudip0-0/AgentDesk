@@ -526,7 +526,7 @@ Acceptance Criteria:
 
 ### TASK-1001: Add Keyboard Shortcuts
 
-Status: backlog
+Status: done
 
 Goal:
 Improve speed for power users.
@@ -546,7 +546,7 @@ Shortcuts for:
 
 ### TASK-1002: Add Agent Run Detail Screen
 
-Status: backlog
+Status: done
 
 Goal:
 Create a detailed run report page.
@@ -569,7 +569,7 @@ Shows:
 
 ### TASK-1003: Build Demo Project Flow
 
-Status: backlog
+Status: done
 
 Goal:
 Create a portfolio-ready demo workflow.

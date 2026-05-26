@@ -24,6 +24,11 @@ import type {
   TerminalLogMeta
 } from "./runLogTypes.js";
 import type {
+  AgentRunDetail,
+  AgentRunDetailRequest,
+  AgentRunListItem
+} from "./runDetailTypes.js";
+import type {
   GitCommitInput,
   GitCommitResult,
   GitCreateBranchInput,
@@ -86,6 +91,8 @@ export interface AgentDeskApi {
     delete: (input: AgentProfileDeleteInput) => Promise<void>;
   };
   runs: {
+    list: (projectId: string) => Promise<AgentRunListItem[]>;
+    getDetail: (request: AgentRunDetailRequest) => Promise<AgentRunDetail>;
     getLogMeta: (request: RunLogRequest) => Promise<TerminalLogMeta>;
     listLogChunks: (request: ListTerminalLogChunksRequest) => Promise<TerminalLogChunk[]>;
     exportLog: (request: RunLogRequest) => Promise<ExportTerminalLogResult>;

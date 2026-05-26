@@ -12,6 +12,7 @@ import type { PromptSendRequest } from "../../../shared/promptSendTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { TaskInput, TaskPriority, TaskRecord, TaskStatus } from "../../../shared/taskTypes";
 import { taskPriorities, taskStatuses } from "../../../shared/taskTypes";
+import type { TaskActionRequestType, UiActionRequest } from "../../../shared/uiActionTypes";
 import { cn } from "../lib/cn";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
@@ -58,6 +59,8 @@ interface TaskBoardProps {
   onRunQualityChecks: (task: TaskRecord) => void;
   onSyncProgress: () => void;
   onSendPromptToTerminal: (request: PromptSendRequest) => void;
+  actionRequest?: UiActionRequest<TaskActionRequestType> | null;
+  onActionHandled?: () => void;
 }
 
 export function TaskBoard({
@@ -66,7 +69,9 @@ export function TaskBoard({
   onLaunchInTerminal,
   onRunQualityChecks,
   onSyncProgress,
-  onSendPromptToTerminal
+  onSendPromptToTerminal,
+  actionRequest,
+  onActionHandled
 }: TaskBoardProps): React.JSX.Element {
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -198,6 +203,59 @@ export function TaskBoard({
     setEditingTaskId(null);
     setDraft(emptyTaskInput(project.id));
   };
+
+  const requestLaunchSelected = (): void => {
+    if (!project || !selectedTask) {
+      setMessage("Select a task before launching an agent.");
+      return;
+    }
+
+    const profile =
+      agentProfiles.find((entry) => entry.id === selectedAgentProfileId) ?? agentProfiles[0] ?? null;
+
+    if (!profile) {
+      setMessage("Add an agent profile before launching.");
+      return;
+    }
+
+    const prompt = buildTaskPrompt(selectedTask, "implementation");
+    const launchConfig = buildAgentLaunchConfig(profile, {
+      project,
+      task: selectedTask,
+      prompt,
+      cwd: project.path
+    });
+
+    setPendingLaunch({
+      task: selectedTask,
+      profile,
+      displayCommand: launchConfig.displayCommand,
+      promptDelivery: launchConfig.promptDelivery
+    });
+    setLaunchConfirmOpen(true);
+  };
+
+  useEffect(() => {
+    if (!actionRequest) {
+      return;
+    }
+
+    if (actionRequest.type === "create") {
+      openCreateDialog();
+    } else if (actionRequest.type === "launch-selected") {
+      requestLaunchSelected();
+    } else if (actionRequest.type === "run-checks-selected") {
+      if (selectedTask) {
+        onRunQualityChecks(selectedTask);
+      } else {
+        setMessage("Select a task before running checks.");
+      }
+    }
+
+    onActionHandled?.();
+    // Only react to dispatched palette/shortcut requests, not every task-board state change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- openCreateDialog and requestLaunchSelected are intentionally omitted
+  }, [actionRequest, onActionHandled, onRunQualityChecks, selectedTask]);
 
   const openEditDialog = (task: TaskRecord): void => {
     setEditingTaskId(task.id);

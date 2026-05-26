@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, Phase 5 terminal engine, Phase 6 agent profiles, Phase 7 quality checks, Phase 8 git integration, and Phase 9 documents and progress are complete.
+Phase 1 foundation through Phase 10 polish and portfolio readiness are complete.
 
 ## MVP Definition
 
@@ -94,6 +94,13 @@ Target MVP capabilities (see README.md):
 - Completed TASK-0902: PROGRESS.md can be previewed from current task statuses, recent run summaries, and recent quality results before writing.
 - Added a Documents screen with selectable preview files, create/overwrite indicators, and explicit write confirmation.
 - Added document IPC through preload with main-process writes scoped to the selected project folder.
+- Hardened templates, task-board progress sync, path validation for new files, and repository tests.
+
+### Phase 10: Polish and Portfolio Readiness
+
+- Completed TASK-1001: keyboard shortcuts and command palette for create task, launch agent, run checks, terminal navigation, and sidebar switching.
+- Completed TASK-1002: agent run detail screen with task, agent, command, prompt, transcript, changed files, quality results, notes, and duration.
+- Completed TASK-1003: demo flow panel on the Projects screen linking open repo, task, agent, terminal, checks, git diff, run detail, and done workflow.
 
 ### Product Discovery
 
@@ -134,11 +141,7 @@ None.
 
 ## Next Tasks
 
-Next focused tasks:
-
-1. TASK-1001: Add Keyboard Shortcuts.
-2. TASK-1002: Add Agent Run Detail Screen.
-3. TASK-1003: Build Demo Project Flow.
+MVP feature phases are complete. Next work is portfolio packaging, manual demo rehearsal, and any follow-up hardening found during real CLI agent sessions.
 
 ## Current Risks
 

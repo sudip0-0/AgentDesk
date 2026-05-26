@@ -37,6 +37,11 @@ import type {
   TerminalLogMeta
 } from "../shared/runLogTypes.js";
 import type {
+  AgentRunDetail,
+  AgentRunDetailRequest,
+  AgentRunListItem
+} from "../shared/runDetailTypes.js";
+import type {
   GitCommitInput,
   GitCommitResult,
   GitCreateBranchInput,
@@ -83,7 +88,7 @@ const subscribe = <T>(
 const agentdeskApi: AgentDeskApi = {
   app: {
     getName: (): string => "AgentDesk",
-    getPhase: (): string => "Documents and Progress"
+    getPhase: (): string => "Polish and Portfolio Readiness"
   },
   db: {
     getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>
@@ -119,6 +124,10 @@ const agentdeskApi: AgentDeskApi = {
       ipcRenderer.invoke("agent-profile:delete", input) as Promise<void>
   },
   runs: {
+    list: (projectId: string): Promise<AgentRunListItem[]> =>
+      ipcRenderer.invoke("runs:list", { projectId }) as Promise<AgentRunListItem[]>,
+    getDetail: (request: AgentRunDetailRequest): Promise<AgentRunDetail> =>
+      ipcRenderer.invoke("runs:get-detail", request) as Promise<AgentRunDetail>,
     getLogMeta: (request: RunLogRequest): Promise<TerminalLogMeta> =>
       ipcRenderer.invoke("runs:log-meta", request) as Promise<TerminalLogMeta>,
     listLogChunks: (request: ListTerminalLogChunksRequest): Promise<TerminalLogChunk[]> =>

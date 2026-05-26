@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AgentProfileRecord } from "../../shared/agentProfileTypes";
 import type { DatabaseHealth } from "../../shared/dbTypes";
 import type { PromptSendRequest } from "../../shared/promptSendTypes";
@@ -6,13 +6,23 @@ import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../s
 import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
 import type { TaskRecord } from "../../shared/taskTypes";
 import { AgentProfilesPanel } from "./components/AgentProfilesPanel";
+import { CommandPalette, type CommandPaletteAction } from "./components/CommandPalette";
+import { DemoFlowPanel } from "./components/DemoFlowPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
 import { GitPanel } from "./components/GitPanel";
 import { QualityPanel } from "./components/QualityPanel";
+import { RunDetailPanel } from "./components/RunDetailPanel";
 import type { DocumentPanelRequest } from "../../shared/documentTypes";
 import type { QualityRunContext } from "../../shared/qualityTypes";
+import type {
+  QualityActionRequestType,
+  TaskActionRequestType,
+  TerminalActionRequestType,
+  UiActionRequest
+} from "../../shared/uiActionTypes";
 import { TaskBoard } from "./components/TaskBoard";
 import { TerminalPanel } from "./components/TerminalPanel";
+import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { Badge } from "./components/ui/Badge";
 import { Button } from "./components/ui/Button";
 import { Card, CardDescription, CardTitle } from "./components/ui/Card";
@@ -47,8 +57,113 @@ export function App(): React.JSX.Element {
   const [promptSendRequest, setPromptSendRequest] = useState<PromptSendRequest | null>(null);
   const [qualityRunContext, setQualityRunContext] = useState<QualityRunContext | null>(null);
   const [documentRequest, setDocumentRequest] = useState<DocumentPanelRequest | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [taskActionRequest, setTaskActionRequest] = useState<UiActionRequest<TaskActionRequestType> | null>(
+    null
+  );
+  const [terminalActionRequest, setTerminalActionRequest] = useState<
+    UiActionRequest<TerminalActionRequestType> | null
+  >(null);
+  const [qualityActionRequest, setQualityActionRequest] = useState<
+    UiActionRequest<QualityActionRequestType> | null
+  >(null);
 
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
+
+  const createUiAction = <T extends string>(type: T): UiActionRequest<T> => ({
+    id: crypto.randomUUID(),
+    type
+  });
+
+  const dispatchTaskAction = useCallback((type: TaskActionRequestType): void => {
+    setActiveNav("tasks");
+    setTaskActionRequest(createUiAction(type));
+  }, []);
+
+  const dispatchTerminalAction = useCallback((type: TerminalActionRequestType): void => {
+    setActiveNav("terminal");
+    setTerminalActionRequest(createUiAction(type));
+  }, []);
+
+  const dispatchQualityAction = useCallback((type: QualityActionRequestType): void => {
+    setActiveNav("quality");
+    setQualityActionRequest(createUiAction(type));
+  }, []);
+
+  const openRunDetail = useCallback((runId?: string | null): void => {
+    if (runId) {
+      setSelectedRunId(runId);
+    }
+
+    setActiveNav("runs");
+  }, []);
+
+  useAppKeyboardShortcuts({
+    onCommandPalette: () => setPaletteOpen(true),
+    onCreateTask: () => dispatchTaskAction("create"),
+    onLaunchAgent: () => dispatchTaskAction("launch-selected"),
+    onRunChecks: () => dispatchQualityAction("run-all"),
+    onOpenTerminal: () => setActiveNav("terminal"),
+    onSwitchNav: (index) => {
+      const item = navItems[index];
+
+      if (item) {
+        setActiveNav(item.id);
+      }
+    },
+    onTerminalNextTab: () => dispatchTerminalAction("next-tab"),
+    onTerminalPreviousTab: () => dispatchTerminalAction("previous-tab"),
+    onTerminalNewTab: () => dispatchTerminalAction("new-tab")
+  });
+
+  const paletteActions = useMemo<CommandPaletteAction[]>(
+    () => [
+      {
+        id: "create-task",
+        label: "Create task",
+        shortcut: "Ctrl+Shift+N",
+        run: () => dispatchTaskAction("create")
+      },
+      {
+        id: "launch-agent",
+        label: "Launch agent for selected task",
+        shortcut: "Ctrl+Shift+L",
+        run: () => dispatchTaskAction("launch-selected")
+      },
+      {
+        id: "run-checks",
+        label: "Run quality checks",
+        shortcut: "Ctrl+Shift+Q",
+        run: () => dispatchQualityAction("run-all")
+      },
+      {
+        id: "open-terminal",
+        label: "Open terminal",
+        shortcut: "Ctrl+Shift+`",
+        run: () => setActiveNav("terminal")
+      },
+      {
+        id: "new-terminal-tab",
+        label: "New terminal tab",
+        shortcut: "Ctrl+Shift+T",
+        run: () => dispatchTerminalAction("new-tab")
+      },
+      {
+        id: "open-runs",
+        label: "Open run detail",
+        shortcut: "Ctrl+8",
+        run: () => openRunDetail()
+      },
+      {
+        id: "open-git",
+        label: "Open git panel",
+        shortcut: "Ctrl+6",
+        run: () => setActiveNav("git")
+      }
+    ],
+    [dispatchQualityAction, dispatchTaskAction, dispatchTerminalAction, openRunDetail]
+  );
 
   const applyOpenedProject = (result: OpenProjectResult): void => {
     setProjects((current) => {
@@ -167,7 +282,7 @@ export function App(): React.JSX.Element {
       <div className="grid min-w-0 grid-rows-[auto_1fr]">
         <header className="flex items-center justify-between gap-4 border-b border-border bg-[#151b22] px-6 py-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 9</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 10</span>
             <h1 className="mt-1 text-xl font-bold text-text">{phase}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -191,7 +306,20 @@ export function App(): React.JSX.Element {
           </Card>
 
           {activeNav === "projects" ? (
-            <section className="grid gap-4 xl:grid-cols-[minmax(280px,360px)_1fr]">
+            <section className="grid gap-4">
+              <DemoFlowPanel
+                onCreateTask={() => dispatchTaskAction("create")}
+                onLaunchAgent={() => dispatchTaskAction("launch-selected")}
+                onMarkDone={() => setActiveNav("tasks")}
+                onOpenProject={() => void openProjectFolder()}
+                onOpenRunDetail={() => openRunDetail()}
+                onOpenTerminal={() => setActiveNav("terminal")}
+                onRunChecks={() => dispatchQualityAction("run-all")}
+                onShowDiff={() => setActiveNav("git")}
+                project={activeProject}
+              />
+
+              <section className="grid gap-4 xl:grid-cols-[minmax(280px,360px)_1fr]">
               <div className="grid content-start gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Projects</h2>
@@ -239,13 +367,20 @@ export function App(): React.JSX.Element {
                 ))}
               </div>
 
-              <ProjectOverviewPanel error={overviewError} overview={overview} />
+              <ProjectOverviewPanel
+                error={overviewError}
+                onOpenRun={openRunDetail}
+                overview={overview}
+              />
+              </section>
             </section>
           ) : null}
 
           {activeNav === "terminal" ? (
             <TerminalPanel
+              actionRequest={terminalActionRequest}
               launchRequest={terminalLaunch}
+              onActionHandled={() => setTerminalActionRequest(null)}
               onLaunchHandled={() => setTerminalLaunch(null)}
               onPromptSendHandled={() => setPromptSendRequest(null)}
               onRunQualityChecks={(context) => {
@@ -260,6 +395,8 @@ export function App(): React.JSX.Element {
 
           {activeNav === "tasks" ? (
             <TaskBoard
+              actionRequest={taskActionRequest}
+              onActionHandled={() => setTaskActionRequest(null)}
               onLaunchInTerminal={(task: TaskRecord, agentProfile?: AgentProfileRecord) => {
                 if (!activeProject) {
                   return;
@@ -294,6 +431,8 @@ export function App(): React.JSX.Element {
 
           {activeNav === "quality" ? (
             <QualityPanel
+              actionRequest={qualityActionRequest}
+              onActionHandled={() => setQualityActionRequest(null)}
               onClearRunContext={() => setQualityRunContext(null)}
               onFixTaskCreated={refreshOverview}
               project={activeProject}
@@ -309,6 +448,10 @@ export function App(): React.JSX.Element {
               project={activeProject}
               request={documentRequest}
             />
+          ) : null}
+
+          {activeNav === "runs" ? (
+            <RunDetailPanel initialRunId={selectedRunId} project={activeProject} />
           ) : null}
 
           <section className="grid gap-3 md:grid-cols-3">
@@ -335,13 +478,26 @@ export function App(): React.JSX.Element {
             </Card>
           </section>
 
+          {activeNav === "settings" ? (
+            <Card>
+              <CardTitle>Settings</CardTitle>
+              <CardDescription>
+                Keyboard shortcuts: Ctrl+Shift+P palette, Ctrl+Shift+N create task, Ctrl+Shift+L launch
+                agent, Ctrl+Shift+Q run checks, Ctrl+Shift+` terminal, Ctrl+Tab switch terminal tabs,
+                Ctrl+1-9 switch sidebar screens.
+              </CardDescription>
+            </Card>
+          ) : null}
+
           {activeNav !== "terminal" &&
           activeNav !== "projects" &&
           activeNav !== "tasks" &&
           activeNav !== "agents" &&
           activeNav !== "quality" &&
           activeNav !== "git" &&
-          activeNav !== "documents" ? (
+          activeNav !== "documents" &&
+          activeNav !== "runs" &&
+          activeNav !== "settings" ? (
             <Card className={cn("border-dashed")}>
               <CardTitle>{navItems.find((item) => item.id === activeNav)?.label}</CardTitle>
               <CardDescription>This screen is planned for a later phase.</CardDescription>
@@ -349,16 +505,20 @@ export function App(): React.JSX.Element {
           ) : null}
         </main>
       </div>
+
+      <CommandPalette actions={paletteActions} onClose={() => setPaletteOpen(false)} open={paletteOpen} />
     </div>
   );
 }
 
 function ProjectOverviewPanel({
   overview,
-  error
+  error,
+  onOpenRun
 }: {
   overview: ProjectOverview | null;
   error: string | null;
+  onOpenRun: (runId: string) => void;
 }): React.JSX.Element {
   if (error) {
     return (
@@ -442,9 +602,11 @@ function ProjectOverviewPanel({
           {recentRuns.length > 0 ? (
             <div className="mt-3 grid gap-2">
               {recentRuns.map((run) => (
-                <div
-                  className="grid gap-1 rounded-md border border-border bg-[#10161d] px-3 py-2"
+                <button
+                  className="grid gap-1 rounded-md border border-border bg-[#10161d] px-3 py-2 text-left transition hover:border-accent/60 hover:bg-panel-strong"
                   key={run.id}
+                  onClick={() => onOpenRun(run.id)}
+                  type="button"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-bold text-text">
@@ -457,7 +619,7 @@ function ProjectOverviewPanel({
                   ) : null}
                   <span className="text-xs text-muted">{run.startedAt}</span>
                   {run.summary ? <span className="text-xs text-muted">{run.summary}</span> : null}
-                </div>
+                </button>
               ))}
             </div>
           ) : (

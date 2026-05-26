@@ -15,6 +15,7 @@ import type {
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { QualityRunContext } from "../../../shared/qualityTypes";
 import type { TaskTerminalLaunch } from "../../../shared/taskLaunchTypes";
+import type { TerminalActionRequestType, UiActionRequest } from "../../../shared/uiActionTypes";
 import { TranscriptPanel } from "./TranscriptPanel";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
@@ -261,8 +262,10 @@ interface TerminalPanelProps {
   project: ProjectSummary | null;
   launchRequest: TaskTerminalLaunch | null;
   promptSendRequest: PromptSendRequest | null;
+  actionRequest?: UiActionRequest<TerminalActionRequestType> | null;
   onLaunchHandled: () => void;
   onPromptSendHandled: () => void;
+  onActionHandled?: () => void;
   onRunQualityChecks: (context: QualityRunContext) => void;
   onTaskStatusChanged: () => void;
 }
@@ -271,8 +274,10 @@ export function TerminalPanel({
   project,
   launchRequest,
   promptSendRequest,
+  actionRequest,
   onLaunchHandled,
   onPromptSendHandled,
+  onActionHandled,
   onRunQualityChecks,
   onTaskStatusChanged
 }: TerminalPanelProps): React.JSX.Element {
@@ -285,6 +290,8 @@ export function TerminalPanel({
 
   const [tabs, setTabs] = useState<TerminalTab[]>(initialState.current.tabs);
   const [activeTabId, setActiveTabId] = useState<string>(initialState.current.activeId);
+  const activeTabIdRef = useRef(activeTabId);
+  activeTabIdRef.current = activeTabId;
   const [cwd, setCwd] = useState("");
   const [shell, setShell] = useState<TerminalShell>("powershell");
   const [transcriptOpen, setTranscriptOpen] = useState(false);
@@ -312,6 +319,18 @@ export function TerminalPanel({
     const tab = createTab();
     setTabs((current) => [...current, tab]);
     setActiveTabId(tab.id);
+  };
+
+  const cycleTab = (direction: 1 | -1): void => {
+    const currentTabs = tabsRef.current;
+    const currentIndex = currentTabs.findIndex((tab) => tab.id === activeTabIdRef.current);
+
+    if (currentTabs.length === 0 || currentIndex < 0) {
+      return;
+    }
+
+    const nextIndex = (currentIndex + direction + currentTabs.length) % currentTabs.length;
+    setActiveTabId(currentTabs[nextIndex]?.id ?? activeTabIdRef.current);
   };
 
   const closeTab = async (tabId: string): Promise<void> => {
@@ -413,6 +432,24 @@ export function TerminalPanel({
       });
     }
   }, [activeTabId, cwd, onTaskStatusChanged, project, shell, updateTab]);
+
+  useEffect(() => {
+    if (!actionRequest) {
+      return;
+    }
+
+    if (actionRequest.type === "new-tab") {
+      addTab();
+    } else if (actionRequest.type === "next-tab") {
+      cycleTab(1);
+    } else if (actionRequest.type === "previous-tab") {
+      cycleTab(-1);
+    } else if (actionRequest.type === "start-active") {
+      void startTerminal();
+    }
+
+    onActionHandled?.();
+  }, [actionRequest, onActionHandled, startTerminal]);
 
   const killTerminal = async (): Promise<void> => {
     if (!activeTab?.sessionId) {

@@ -7,6 +7,7 @@ import type {
   QualityRunContext
 } from "../../../shared/qualityTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
+import type { QualityActionRequestType, UiActionRequest } from "../../../shared/uiActionTypes";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
@@ -52,12 +53,16 @@ const summarizeRunResults = (results: QualityCheckRecord[]): string => {
 export function QualityPanel({
   project,
   runContext,
+  actionRequest,
   onClearRunContext,
+  onActionHandled,
   onFixTaskCreated
 }: {
   project: ProjectSummary | null;
   runContext?: QualityRunContext | null;
+  actionRequest?: UiActionRequest<QualityActionRequestType> | null;
   onClearRunContext?: () => void;
+  onActionHandled?: () => void;
   onFixTaskCreated: () => void;
 }): React.JSX.Element {
   const [commands, setCommands] = useState<QualityCommandRecord[]>([]);
@@ -112,6 +117,20 @@ export function QualityPanel({
 
     void loadQualityData(project.id);
   }, [loadQualityData, project]);
+
+  useEffect(() => {
+    if (!actionRequest || actionRequest.type !== "run-all") {
+      return;
+    }
+
+    if (commands.length === 0) {
+      setMessage("Add a quality command before running checks.");
+    } else {
+      setRunConfirmOpen(true);
+    }
+
+    onActionHandled?.();
+  }, [actionRequest, commands.length, onActionHandled]);
 
   const openCreate = (): void => {
     if (!project) {
