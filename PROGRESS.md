@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, Phase 5 terminal engine, Phase 6 agent profiles, Phase 7 quality checks, and Phase 8 git integration are complete.
+Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, Phase 4 prompt engine, Phase 5 terminal engine, Phase 6 agent profiles, Phase 7 quality checks, Phase 8 git integration, and Phase 9 documents and progress are complete.
 
 ## MVP Definition
 
@@ -19,7 +19,7 @@ Target MVP capabilities (see README.md):
 | Save run logs | Done |
 | Run quality checks | Done |
 | Show git status and diffs | Done |
-| Track progress locally | Partial (SQLite + overview; PROGRESS.md sync pending) |
+| Track progress locally | Done (SQLite + previewed PROGRESS.md sync) |
 
 ## Completed
 
@@ -88,6 +88,13 @@ Target MVP capabilities (see README.md):
 - Completed TASK-0803: users can create a branch from a task, stage selected files, edit a generated commit message, and confirm a local-only commit.
 - Added git IPC through preload with main-process execution, project-scoped file checks, untracked/mixed diffs, branch/commit confirmations, and graceful non-git folder handling.
 
+### Phase 9: Documents and Progress
+
+- Completed TASK-0901: default project docs can be generated as markdown previews before writing.
+- Completed TASK-0902: PROGRESS.md can be previewed from current task statuses, recent run summaries, and recent quality results before writing.
+- Added a Documents screen with selectable preview files, create/overwrite indicators, and explicit write confirmation.
+- Added document IPC through preload with main-process writes scoped to the selected project folder.
+
 ### Product Discovery
 
 - Defined desktop-first direction.
@@ -129,8 +136,9 @@ None.
 
 Next focused tasks:
 
-1. TASK-0901: Generate Project Docs.
-2. TASK-0902: Update PROGRESS.md from Task Status.
+1. TASK-1001: Add Keyboard Shortcuts.
+2. TASK-1002: Add Agent Run Detail Screen.
+3. TASK-1003: Build Demo Project Flow.
 
 ## Current Risks
 

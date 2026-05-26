@@ -33,6 +33,12 @@ import type {
   GitStatusResult
 } from "./gitTypes.js";
 import type {
+  DocumentsPreviewResult,
+  DocumentsWriteInput,
+  DocumentsWriteResult,
+  ProgressPreviewResult
+} from "./documentTypes.js";
+import type {
   CreateTerminalRequest,
   CreateTerminalResult,
   TerminalActivityEvent,
@@ -99,6 +105,11 @@ export interface AgentDeskApi {
     createBranch: (input: GitCreateBranchInput) => Promise<GitStatusResult>;
     stageFiles: (input: GitStageFilesInput) => Promise<GitStatusResult>;
     commit: (input: GitCommitInput) => Promise<GitCommitResult>;
+  };
+  documents: {
+    previewDefaults: (projectId: string) => Promise<DocumentsPreviewResult>;
+    previewProgress: (projectId: string) => Promise<ProgressPreviewResult>;
+    write: (input: DocumentsWriteInput) => Promise<DocumentsWriteResult>;
   };
   terminals: {
     create: (request: CreateTerminalRequest) => Promise<CreateTerminalResult>;

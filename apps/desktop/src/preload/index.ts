@@ -46,6 +46,12 @@ import type {
   GitStatusResult
 } from "../shared/gitTypes.js";
 import type {
+  DocumentsPreviewResult,
+  DocumentsWriteInput,
+  DocumentsWriteResult,
+  ProgressPreviewResult
+} from "../shared/documentTypes.js";
+import type {
   TaskDeleteInput,
   TaskInput,
   TaskRecord,
@@ -77,7 +83,7 @@ const subscribe = <T>(
 const agentdeskApi: AgentDeskApi = {
   app: {
     getName: (): string => "AgentDesk",
-    getPhase: (): string => "Git Integration"
+    getPhase: (): string => "Documents and Progress"
   },
   db: {
     getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>
@@ -147,6 +153,14 @@ const agentdeskApi: AgentDeskApi = {
       ipcRenderer.invoke("git:stage-files", input) as Promise<GitStatusResult>,
     commit: (input: GitCommitInput): Promise<GitCommitResult> =>
       ipcRenderer.invoke("git:commit", input) as Promise<GitCommitResult>
+  },
+  documents: {
+    previewDefaults: (projectId: string): Promise<DocumentsPreviewResult> =>
+      ipcRenderer.invoke("documents:preview-defaults", { projectId }) as Promise<DocumentsPreviewResult>,
+    previewProgress: (projectId: string): Promise<ProgressPreviewResult> =>
+      ipcRenderer.invoke("documents:preview-progress", { projectId }) as Promise<ProgressPreviewResult>,
+    write: (input: DocumentsWriteInput): Promise<DocumentsWriteResult> =>
+      ipcRenderer.invoke("documents:write", input) as Promise<DocumentsWriteResult>
   },
   terminals: {
     create: (request: CreateTerminalRequest): Promise<CreateTerminalResult> =>

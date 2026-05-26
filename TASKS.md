@@ -483,7 +483,7 @@ Acceptance Criteria:
 
 ### TASK-0901: Generate Project Docs
 
-Status: backlog
+Status: done
 
 Goal:
 Create default markdown docs in the project.
@@ -508,7 +508,7 @@ Creates:
 
 ### TASK-0902: Update PROGRESS.md from Task Status
 
-Status: backlog
+Status: done
 
 Goal:
 Sync task progress to markdown.
