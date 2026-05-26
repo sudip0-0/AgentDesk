@@ -201,12 +201,16 @@ Keep docs aligned with code.
 Must update:
 
 - README.md
+- PRODUCT.md
 - ARCHITECTURE.md
 - TASKS.md
 - PROGRESS.md
 - DECISIONS.md
 - TESTING.md
 - SECURITY.md
+- PROMPTS.md
+- GOAL_COMMANDS.md
+- KNOWN_ISSUES.md
 
 only when behavior changes.
 

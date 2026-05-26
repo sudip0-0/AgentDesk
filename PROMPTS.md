@@ -69,7 +69,7 @@ Expected output:
 
 ---
 
-# 2. Phase 1 /goal Prompt: Desktop Foundation
+# 2. Phase 1 /goal Prompt: Desktop App Foundation
 
 ```txt
 /goal
@@ -85,68 +85,29 @@ Read:
 - AGENTS.md
 
 Goal:
-Create the initial Electron + React + TypeScript app structure.
+Create the initial Electron + React + TypeScript app structure, base UI system, and local SQLite foundation.
 
 Requirements:
-1. Electron app launches on Windows.
-2. React renderer loads successfully.
-3. Main process and renderer process are separated.
-4. Preload file exists and exposes a minimal safe API.
-5. TypeScript is configured.
-6. Basic app layout exists:
+1. Implement TASK-0101, TASK-0102, and TASK-0103 from TASKS.md.
+2. Electron app launches on Windows.
+3. React renderer loads successfully.
+4. Main process and renderer process are separated.
+5. Preload file exists and exposes a minimal safe API.
+6. TypeScript is configured.
+7. Basic app layout exists:
    - sidebar
    - top bar
    - main content area
-7. Add development, lint, typecheck, and build scripts.
-8. Add basic error boundary or fallback UI.
-9. Keep Electron security settings safe:
+8. Add development, lint, typecheck, test, and build scripts.
+9. Add Tailwind CSS and reusable Button, Card, Input, Dialog, Tabs, and Badge components.
+10. Add SQLite in the app data folder with repeatable migrations and safe database health handling.
+11. Add basic error boundary or fallback UI.
+12. Keep Electron security settings safe:
    - nodeIntegration false
    - contextIsolation true
    - preload enabled
 
-Do not implement terminal, SQLite, git, or agent profiles yet.
-
-Quality commands:
-- npm run lint
-- npm run typecheck
-- npm run build
-
-Return:
-- summary
-- files changed
-- commands run
-- risks
-```
-
----
-
-# 3. Phase 2 /goal Prompt: Terminal Engine
-
-```txt
-/goal
-
-Implement Phase 2: Terminal Engine.
-
-Goal:
-Add embedded terminal support using node-pty in the Electron main process and xterm.js in the React renderer.
-
-Requirements:
-1. Main process can create PTY sessions.
-2. Renderer displays terminal output using xterm.js.
-3. User can type into the terminal.
-4. Terminal starts in selected working directory.
-5. Terminal supports PowerShell as default shell on Windows.
-6. Terminal can be resized.
-7. Terminal can be killed.
-8. Terminal output is streamed through safe IPC.
-9. Terminal errors are shown in UI.
-10. No direct shell access from renderer.
-
-Architecture rules:
-- node-pty must only run in main process.
-- renderer talks to terminal through preload IPC API.
-- terminal session IDs must be tracked.
-- cleanup processes when app closes.
+Do not implement project picker, task board, terminal engine, git, or agent profiles yet.
 
 Quality commands:
 - npm run lint
@@ -158,35 +119,35 @@ Return:
 - summary
 - files changed
 - commands run
-- manual test steps
 - risks
 ```
 
 ---
 
-# 4. Phase 3 /goal Prompt: Project Workspace
+# 3. Phase 2 /goal Prompt: Project Workspace
 
 ```txt
 /goal
 
-Implement Phase 3: Project Workspace.
+Implement Phase 2: Project Workspace.
 
 Goal:
 Allow users to select a local project folder and detect basic project metadata.
 
 Requirements:
-1. Add project folder picker using Electron native dialog.
-2. Store selected project in local app state or database if database exists.
-3. Detect:
+1. Implement TASK-0201, TASK-0202, and TASK-0203 from TASKS.md.
+2. Add project folder picker using Electron native dialog.
+3. Store selected project in local app state or database if database exists.
+4. Detect:
    - package.json
    - package manager
    - scripts
    - git repo
    - current branch
-4. Show project overview screen.
-5. Handle invalid folders safely.
-6. Prevent duplicate project entries.
-7. Restrict project file operations to selected folder.
+5. Show project overview screen.
+6. Handle invalid folders safely.
+7. Prevent duplicate project entries.
+8. Restrict project file operations to selected folder.
 
 Quality commands:
 - npm run lint
@@ -203,28 +164,29 @@ Return:
 
 ---
 
-# 5. Phase 4 /goal Prompt: Task Board
+# 4. Phase 3 /goal Prompt: Task Board
 
 ```txt
 /goal
 
-Implement Phase 4: Task Board.
+Implement Phase 3: Task Board.
 
 Goal:
 Create task management for AgentDesk.
 
 Requirements:
-1. Add task data model.
-2. Create task CRUD.
-3. Create kanban board with columns:
+1. Implement TASK-0301, TASK-0302, and TASK-0303 from TASKS.md.
+2. Add task data model.
+3. Create task CRUD.
+4. Create kanban board with columns:
    - Backlog
    - Ready
    - Running
    - Needs Review
    - Failed
    - Done
-4. Add task detail panel.
-5. Task fields:
+5. Add task detail panel.
+6. Task fields:
    - title
    - description
    - status
@@ -234,9 +196,9 @@ Requirements:
    - quality commands
    - security notes
    - done definition
-6. Persist tasks locally.
-7. Allow changing task status.
-8. Add empty states.
+7. Persist tasks locally.
+8. Allow changing task status.
+9. Add empty states.
 
 Quality commands:
 - npm run lint
@@ -253,74 +215,28 @@ Return:
 
 ---
 
-# 6. Phase 5 /goal Prompt: Agent Profiles
+# 5. Phase 4 /goal Prompt: Prompt Engine
 
 ```txt
 /goal
 
-Implement Phase 5: Agent Profiles.
-
-Goal:
-Allow users to configure coding-agent CLI tools.
-
-Requirements:
-1. Add agent profile data model.
-2. Add default profiles for:
-   - Codex
-   - OpenCode
-   - Kiro CLI
-   - Devin CLI
-   - Claude Code
-   - Custom Command
-3. Profile fields:
-   - name
-   - command
-   - args template
-   - shell
-   - mode: interactive or one-shot
-   - environment variables
-   - working directory behavior
-4. Add UI to create/edit/delete profiles.
-5. Add command preview before launch.
-6. Do not execute commands silently.
-7. Validate empty or unsafe profile fields.
-
-Quality commands:
-- npm run lint
-- npm run typecheck
-- npm test
-- npm run build
-
-Return:
-- summary
-- files changed
-- commands run
-- risks
-```
-
----
-
-# 7. Phase 6 /goal Prompt: Prompt Engine
-
-```txt
-/goal
-
-Implement Phase 6: Prompt Engine.
+Implement Phase 4: Prompt Engine.
 
 Goal:
 Generate strong prompts from project and task context.
 
 Requirements:
-1. Create prompt-engine module.
-2. Add implementation prompt template.
-3. Add review prompt template.
-4. Add fix prompt template.
-5. Add test prompt template.
-6. Add security prompt template.
-7. Inject task fields into prompts.
-8. Add copy prompt button.
-9. Add send prompt to active terminal button.
-10. Add prompt preview UI.
+1. Implement TASK-0401, TASK-0402, and TASK-0403 from TASKS.md.
+2. Create prompt-engine module.
+3. Add implementation prompt template.
+4. Add review prompt template.
+5. Add fix prompt template.
+6. Add test prompt template.
+7. Add security prompt template.
+8. Inject task fields into prompts.
+9. Add copy prompt button.
+10. Add send prompt to active terminal button.
+11. Add prompt preview UI.
 
 Prompt rules:
 - Include task ID and goal.
@@ -345,28 +261,94 @@ Return:
 
 ---
 
-# 8. Phase 7 /goal Prompt: Run Task with Agent
+# 6. Phase 5 /goal Prompt: Terminal Engine
 
 ```txt
 /goal
 
-Implement Phase 7: Run Task with Agent.
+Implement Phase 5: Terminal Engine.
 
 Goal:
-Allow a user to launch a selected task using a selected agent profile.
+Add embedded terminal support using node-pty in the Electron main process, xterm.js in the React renderer, and persisted terminal logs.
 
 Requirements:
-1. User selects task.
-2. User selects agent profile.
-3. App builds command from profile.
-4. App shows command preview.
-5. User confirms launch.
-6. App creates agent run record.
-7. App opens terminal session in project folder.
-8. App sends prompt if profile supports one-shot or send-prompt mode.
-9. Terminal logs are linked to run.
-10. Task status changes to Running.
-11. When process exits, run status is updated.
+1. Implement TASK-0501, TASK-0502, and TASK-0503 from TASKS.md.
+2. Main process can create PTY sessions.
+3. Renderer displays terminal output using xterm.js.
+4. User can type into the terminal.
+5. Terminal starts in selected working directory.
+6. Terminal supports PowerShell as default shell on Windows.
+7. Terminal can be resized.
+8. Terminal can be killed.
+9. Terminal output is streamed through safe IPC.
+10. Terminal errors are shown in UI.
+11. Multiple terminal tabs are supported.
+12. Terminal output chunks are saved to SQLite and linked to agent runs.
+13. User can view and export terminal transcripts.
+14. Large logs do not freeze the UI.
+15. No direct shell access from renderer.
+
+Architecture rules:
+- node-pty must only run in main process.
+- renderer talks to terminal through preload IPC API.
+- terminal session IDs must be tracked.
+- cleanup processes when app closes.
+
+Quality commands:
+- npm run lint
+- npm run typecheck
+- npm test
+- npm run build
+
+Return:
+- summary
+- files changed
+- commands run
+- manual test steps
+- risks
+```
+
+---
+
+# 7. Phase 6 /goal Prompt: Agent Profiles
+
+```txt
+/goal
+
+Implement Phase 6: Agent Profiles.
+
+Goal:
+Allow users to configure coding-agent CLI tools and launch a selected task using a selected profile.
+
+Requirements:
+1. Implement TASK-0601, TASK-0602, and TASK-0603 from TASKS.md.
+2. Add agent profile data model.
+3. Add default profiles for:
+   - Codex
+   - OpenCode
+   - Kiro CLI
+   - Devin CLI
+   - Claude Code
+   - Custom Command
+4. Profile fields:
+   - name
+   - command
+   - args template
+   - shell
+   - mode: interactive or one-shot
+   - environment variables
+   - working directory behavior
+5. Add UI to create/edit/delete profiles.
+6. Add command preview before launch.
+7. User selects task and agent profile.
+8. App builds command from profile.
+9. User confirms launch.
+10. App creates agent run record.
+11. App opens terminal session in project folder.
+12. App sends prompt if profile supports one-shot or send-prompt mode.
+13. Terminal logs are linked to run.
+14. Task status changes to Running.
+15. When process exits, run status is updated.
 
 Security:
 - show command before launch
@@ -389,30 +371,31 @@ Return:
 
 ---
 
-# 9. Phase 8 /goal Prompt: Quality Checks
+# 8. Phase 7 /goal Prompt: Quality Checks
 
 ```txt
 /goal
 
-Implement Phase 8: Quality Checks.
+Implement Phase 7: Quality Checks.
 
 Goal:
 Run project quality commands and store results.
 
 Requirements:
-1. Add quality command configuration per project.
-2. Add default Node commands:
+1. Implement TASK-0701, TASK-0702, and TASK-0703 from TASKS.md.
+2. Add quality command configuration per project.
+3. Add default Node commands:
    - npm run lint
    - npm run typecheck
    - npm test
    - npm run build
-3. Allow user to edit commands.
-4. Run commands in project folder.
-5. Capture stdout, stderr, exit code, start time, end time.
-6. Show pass/fail/skipped result.
-7. Link result to task and agent run if available.
-8. Add button to create fix task from failed check.
-9. Add timeout support or clear TODO for timeout implementation.
+4. Allow user to edit commands.
+5. Run commands in project folder.
+6. Capture stdout, stderr, exit code, start time, end time.
+7. Show pass/fail/skipped result.
+8. Link result to task and agent run if available.
+9. Add button to create fix task from failed check.
+10. Add timeout support or clear TODO for timeout implementation.
 
 Quality commands:
 - npm run lint
@@ -429,28 +412,29 @@ Return:
 
 ---
 
-# 10. Phase 9 /goal Prompt: Git Integration
+# 9. Phase 8 /goal Prompt: Git Integration
 
 ```txt
 /goal
 
-Implement Phase 9: Git Integration.
+Implement Phase 8: Git Integration.
 
 Goal:
 Show git status and diffs for the current project.
 
 Requirements:
-1. Detect if folder is a git repo.
-2. Show current branch.
-3. Show changed files.
-4. Show staged and unstaged files.
-5. Show diff for selected file.
-6. Allow creating branch from task.
-7. Allow staging selected files.
-8. Allow commit with editable generated message.
-9. Ask confirmation before commit.
-10. Do not push automatically in MVP.
-11. Handle non-git folders gracefully.
+1. Implement TASK-0801, TASK-0802, and TASK-0803 from TASKS.md.
+2. Detect if folder is a git repo.
+3. Show current branch.
+4. Show changed files.
+5. Show staged and unstaged files.
+6. Show diff for selected file.
+7. Allow creating branch from task.
+8. Allow staging selected files.
+9. Allow commit with editable generated message.
+10. Ask confirmation before commit.
+11. Do not push automatically in MVP.
+12. Handle non-git folders gracefully.
 
 Quality commands:
 - npm run lint
@@ -467,7 +451,104 @@ Return:
 
 ---
 
-# 11. Code Review Prompt
+# 10. Phase 9 /goal Prompt: Documents and Progress
+
+```txt
+/goal
+
+Implement Phase 9: Documents and Progress.
+
+Goal:
+Generate project documentation and sync task progress to markdown after user preview.
+
+Requirements:
+1. Implement TASK-0901 and TASK-0902 from TASKS.md.
+2. Generate default docs when requested:
+   - README.md
+   - PRODUCT.md
+   - ARCHITECTURE.md
+   - TASKS.md
+   - PROGRESS.md
+   - DECISIONS.md
+   - TESTING.md
+   - SECURITY.md
+   - AGENTS.md
+   - PROMPTS.md
+   - KNOWN_ISSUES.md
+3. Sync task status changes to PROGRESS.md.
+4. Add run summary and quality result to progress updates.
+5. Show preview before writing markdown files.
+6. Keep documentation updates scoped to behavior changes.
+
+Quality commands:
+- npm run lint
+- npm run typecheck
+- npm test
+- npm run build
+
+Return:
+- summary
+- files changed
+- commands run
+- risks
+```
+
+---
+
+# 11. Phase 10 /goal Prompt: Polish and Portfolio Readiness
+
+```txt
+/goal
+
+Implement Phase 10: Polish and Portfolio Readiness.
+
+Goal:
+Improve speed, run review detail, and demo readiness without expanding MVP scope.
+
+Requirements:
+1. Implement TASK-1001, TASK-1002, and TASK-1003 from TASKS.md.
+2. Add keyboard shortcuts for:
+   - open command palette
+   - create task
+   - launch agent
+   - run checks
+   - open terminal
+   - switch tabs
+3. Add agent run detail screen showing:
+   - task
+   - agent
+   - command
+   - prompt
+   - transcript
+   - changed files
+   - quality results
+   - notes
+   - duration
+4. Build a demo flow showing:
+   - open repo
+   - create task
+   - launch agent
+   - capture logs
+   - run checks
+   - show diff
+   - mark task done
+
+Quality commands:
+- npm run lint
+- npm run typecheck
+- npm test
+- npm run build
+
+Return:
+- summary
+- files changed
+- commands run
+- risks
+```
+
+---
+
+# 12. Code Review Prompt
 
 ```txt
 You are a senior code reviewer for AgentDesk.
@@ -545,7 +626,7 @@ Do not modify files in review mode unless explicitly asked.
 
 ---
 
-# 12. Fix Prompt
+# 13. Fix Prompt
 
 ```txt
 /goal
@@ -594,7 +675,7 @@ Return:
 
 ---
 
-# 13. Quality Check Command Prompt
+# 14. Quality Check Command Prompt
 
 ```txt
 /goal
@@ -643,7 +724,7 @@ Return:
 
 ---
 
-# 14. Feature Expansion Prompt
+# 15. Feature Expansion Prompt
 
 ```txt
 You are a product-minded senior engineer.
@@ -679,7 +760,7 @@ Do not implement changes yet.
 
 ---
 
-# 15. UI/UX Enhancement Prompt
+# 16. UI/UX Enhancement Prompt
 
 ```txt
 /goal
@@ -718,7 +799,7 @@ Return:
 
 ---
 
-# 16. Security Review Prompt
+# 17. Security Review Prompt
 
 ```txt
 You are a security reviewer for AgentDesk.

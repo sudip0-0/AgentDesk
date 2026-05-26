@@ -7,6 +7,7 @@ import type {
   TerminalExitEvent,
   TerminalShell
 } from "../../../shared/terminalTypes";
+import type { ProjectSummary } from "../../../shared/projectTypes";
 import { TranscriptPanel } from "./TranscriptPanel";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
@@ -232,7 +233,11 @@ const TerminalTabPane = forwardRef<TerminalPaneHandle, TerminalTabPaneProps>(fun
   );
 });
 
-export function TerminalPanel(): React.JSX.Element {
+interface TerminalPanelProps {
+  project: ProjectSummary | null;
+}
+
+export function TerminalPanel({ project }: TerminalPanelProps): React.JSX.Element {
   const initialState = useRef<{ tabs: TerminalTab[]; activeId: string } | null>(null);
 
   if (!initialState.current) {
@@ -315,6 +320,7 @@ export function TerminalPanel(): React.JSX.Element {
 
     try {
       const result = await window.agentdesk.terminals.create({
+        projectId: project?.id,
         cwd,
         shell,
         cols: size.cols,
@@ -407,6 +413,7 @@ export function TerminalPanel(): React.JSX.Element {
   }, []);
 
   const canStart =
+    Boolean(project) &&
     activeTab &&
     !activeTab.sessionId &&
     activeTab.status !== "starting" &&
@@ -472,9 +479,10 @@ export function TerminalPanel(): React.JSX.Element {
 
       <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_160px_auto]">
         <Input
+          disabled={!project}
           label="Working directory"
           onChange={(event) => setCwd(event.target.value)}
-          placeholder="Blank uses your home folder"
+          placeholder={project ? "Blank uses selected project root" : "Open a project first"}
           value={cwd}
         />
 

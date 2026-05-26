@@ -259,6 +259,7 @@ MVP adapters:
 - OpenCodeAdapter
 - KiroAdapter
 - DevinAdapter
+- ClaudeCodeAdapter
 - CustomCommandAdapter
 
 ## 5. PTY Terminal Module
@@ -266,7 +267,7 @@ MVP adapters:
 Path:
 
 ```txt
-apps/desktop/src/main/pty
+apps/desktop/src/main/terminal
 ```
 
 Responsibilities:
@@ -433,6 +434,7 @@ CREATE TABLE agent_runs (
   project_id TEXT NOT NULL,
   task_id TEXT,
   agent_profile_id TEXT,
+  terminal_session_id TEXT,
   command TEXT NOT NULL,
   prompt TEXT,
   status TEXT NOT NULL,
@@ -443,7 +445,8 @@ CREATE TABLE agent_runs (
   summary TEXT,
   error_message TEXT,
   FOREIGN KEY(project_id) REFERENCES projects(id),
-  FOREIGN KEY(task_id) REFERENCES tasks(id)
+  FOREIGN KEY(task_id) REFERENCES tasks(id),
+  FOREIGN KEY(agent_profile_id) REFERENCES agent_profiles(id)
 );
 ```
 
@@ -453,11 +456,14 @@ CREATE TABLE agent_runs (
 CREATE TABLE terminal_logs (
   id TEXT PRIMARY KEY,
   agent_run_id TEXT NOT NULL,
+  sequence INTEGER NOT NULL,
   chunk TEXT NOT NULL,
   created_at TEXT NOT NULL,
   FOREIGN KEY(agent_run_id) REFERENCES agent_runs(id)
 );
 ```
+
+Terminal logs are indexed by `(agent_run_id, sequence)` so transcripts can be loaded in order.
 
 ### quality_checks
 
@@ -474,7 +480,9 @@ CREATE TABLE quality_checks (
   exit_code INTEGER,
   started_at TEXT NOT NULL,
   finished_at TEXT,
-  FOREIGN KEY(agent_run_id) REFERENCES agent_runs(id)
+  FOREIGN KEY(agent_run_id) REFERENCES agent_runs(id),
+  FOREIGN KEY(project_id) REFERENCES projects(id),
+  FOREIGN KEY(task_id) REFERENCES tasks(id)
 );
 ```
 

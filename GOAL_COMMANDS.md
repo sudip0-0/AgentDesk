@@ -15,7 +15,7 @@ This file contains phase-by-phase `/goal` commands for coding agents.
 
 ---
 
-## Phase 1: Desktop Foundation
+## Phase 1: Desktop App Foundation
 
 ```txt
 /goal
@@ -124,86 +124,7 @@ Return:
 
 ---
 
-## Phase 4: Terminal Engine
-
-```txt
-/goal
-
-Implement TASK-0501, TASK-0502, and TASK-0503 from TASKS.md.
-
-Focus:
-- node-pty backend
-- xterm.js renderer
-- terminal tabs
-- log capture
-
-Requirements:
-- PTY must run only in Electron main process.
-- Renderer receives output through safe IPC.
-- User can type into terminal.
-- User can kill terminal.
-- Terminal starts in project folder.
-- PowerShell should be default shell on Windows.
-
-Run:
-- npm run lint
-- npm run typecheck
-- npm test
-- npm run build
-
-Manual checks:
-- open terminal
-- run node -v
-- run npm -v
-- kill terminal
-- reopen terminal
-
-Return:
-- summary
-- files changed
-- commands run
-- manual test result
-- risks
-```
-
----
-
-## Phase 5: Agent Profiles and Launch
-
-```txt
-/goal
-
-Implement TASK-0601, TASK-0602, and TASK-0603 from TASKS.md.
-
-Focus:
-- agent profile system
-- default profiles
-- launch agent from task
-
-Requirements:
-- Add profiles for Codex, OpenCode, Kiro CLI, Devin CLI, Claude Code, and Custom Command.
-- Command preview before launch.
-- User confirmation before launch.
-- Launch happens through terminal engine.
-- Run is linked to task.
-- Terminal log is linked to run.
-
-Run:
-- npm run lint
-- npm run typecheck
-- npm test
-- npm run build
-
-Return:
-- summary
-- files changed
-- commands run
-- risks
-```
-
----
-
-## Phase 6: Prompt Engine
+## Phase 4: Prompt Engine
 
 ```txt
 /goal
@@ -240,7 +161,88 @@ Return:
 
 ---
 
-## Phase 7: Quality Gate
+## Phase 5: Terminal Engine
+
+```txt
+/goal
+
+Implement TASK-0501, TASK-0502, and TASK-0503 from TASKS.md.
+
+Focus:
+- node-pty backend
+- xterm.js renderer
+- terminal tabs
+- log capture
+
+Requirements:
+- PTY must run only in Electron main process.
+- Renderer receives output through safe IPC.
+- User can type into terminal.
+- User can kill terminal.
+- Terminal starts in selected working directory.
+- PowerShell should be default shell on Windows.
+- Terminal logs are chunked, stored, viewable, and exportable.
+
+Run:
+- npm run lint
+- npm run typecheck
+- npm test
+- npm run build
+
+Manual checks:
+- open terminal
+- run node -v
+- run npm -v
+- kill terminal
+- reopen terminal
+- view/export transcript
+
+Return:
+- summary
+- files changed
+- commands run
+- manual test result
+- risks
+```
+
+---
+
+## Phase 6: Agent Profiles
+
+```txt
+/goal
+
+Implement TASK-0601, TASK-0602, and TASK-0603 from TASKS.md.
+
+Focus:
+- agent profile system
+- default profiles
+- launch agent from task
+
+Requirements:
+- Add profiles for Codex, OpenCode, Kiro CLI, Devin CLI, Claude Code, and Custom Command.
+- Command preview before launch.
+- User confirmation before launch.
+- Launch happens through terminal engine.
+- Run is linked to task.
+- Terminal log is linked to run.
+
+Run:
+- npm run lint
+- npm run typecheck
+- npm test
+- npm run build
+
+Return:
+- summary
+- files changed
+- commands run
+- risks
+```
+
+---
+
+## Phase 7: Quality Checks
 
 ```txt
 /goal
@@ -313,7 +315,7 @@ Return:
 
 ---
 
-## Phase 9: Docs and Progress Sync
+## Phase 9: Documents and Progress
 
 ```txt
 /goal
@@ -346,7 +348,7 @@ Return:
 
 ---
 
-## Phase 10: Polish and Demo Readiness
+## Phase 10: Polish and Portfolio Readiness
 
 ```txt
 /goal

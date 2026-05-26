@@ -11,6 +11,7 @@ import type {
   TerminalWriteRequest
 } from "../shared/terminalTypes.js";
 import type { DatabaseHealth } from "../shared/dbTypes.js";
+import type { OpenProjectResult, ProjectSummary } from "../shared/projectTypes.js";
 import type {
   ExportTerminalLogResult,
   ListTerminalLogChunksRequest,
@@ -41,10 +42,16 @@ const subscribe = <T>(
 const agentdeskApi: AgentDeskApi = {
   app: {
     getName: (): string => "AgentDesk",
-    getPhase: (): string => "Foundation & Logs"
+    getPhase: (): string => "Project Workspace"
   },
   db: {
     getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>
+  },
+  projects: {
+    list: (): Promise<ProjectSummary[]> =>
+      ipcRenderer.invoke("project:list") as Promise<ProjectSummary[]>,
+    openFolder: (): Promise<OpenProjectResult | null> =>
+      ipcRenderer.invoke("project:open-folder") as Promise<OpenProjectResult | null>
   },
   runs: {
     getLogMeta: (runId: string): Promise<TerminalLogMeta> =>

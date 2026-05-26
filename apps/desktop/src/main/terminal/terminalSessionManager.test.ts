@@ -16,6 +16,22 @@ const createLogWriter = (): TerminalLogWriter =>
     flushAll: vi.fn()
   }) as unknown as TerminalLogWriter;
 
+const createManager = (logWriter = createLogWriter()): TerminalSessionManager =>
+  new TerminalSessionManager(logWriter, () => ({
+    id: "test-project",
+    name: "Test Project",
+    path: process.cwd(),
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+    metadata: {
+      hasPackageJson: true,
+      packageManager: "npm",
+      scripts: [],
+      isGitRepo: false,
+      currentBranch: null
+    }
+  }));
+
 const waitFor = async (predicate: () => boolean, timeoutMs = 8000): Promise<void> => {
   const startedAt = Date.now();
 
@@ -33,7 +49,7 @@ const waitFor = async (predicate: () => boolean, timeoutMs = 8000): Promise<void
 describe("TerminalSessionManager", () => {
   it("starts a PTY, streams output, accepts input, and exits", async () => {
     const logWriter = createLogWriter();
-    const manager = new TerminalSessionManager(logWriter);
+    const manager = createManager(logWriter);
     const events: SentEvent[] = [];
     const webContents = {
       id: 1,
@@ -70,7 +86,7 @@ describe("TerminalSessionManager", () => {
   }, 10000);
 
   it("rejects writes from a different web contents owner", () => {
-    const manager = new TerminalSessionManager(createLogWriter());
+    const manager = createManager();
     const owner = {
       id: 1,
       isDestroyed: () => false,
@@ -92,7 +108,7 @@ describe("TerminalSessionManager", () => {
   });
 
   it("tracks active sessions and kills all", async () => {
-    const manager = new TerminalSessionManager(createLogWriter());
+    const manager = createManager();
     const webContents = {
       id: 3,
       isDestroyed: () => false,

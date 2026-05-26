@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { initializeDatabase, shutdownDatabase } from "./db/initDatabase.js";
 import { registerDatabaseIpc } from "./ipc/dbIpc.js";
 import { registerRunLogIpc } from "./ipc/runLogIpc.js";
+import { registerProjectIpc } from "./projects/projectIpc.js";
 import { registerTerminalIpc, terminalSessionManager } from "./terminal/terminalIpc.js";
 
 let isQuitting = false;
@@ -76,6 +77,7 @@ const createMainWindow = (): BrowserWindow => {
 app.whenReady().then(() => {
   initializeDatabase();
   registerDatabaseIpc();
+  registerProjectIpc();
   registerRunLogIpc();
   registerTerminalIpc();
   createMainWindow();

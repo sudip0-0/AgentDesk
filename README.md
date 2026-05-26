@@ -135,7 +135,7 @@ agentdesk/
           db/
           git/
           ipc/
-          pty/
+          terminal/
           quality/
           shell/
         renderer/
@@ -153,17 +153,16 @@ agentdesk/
     shared/
       types/
       schemas/
-  docs/
-    PRODUCT.md
-    ARCHITECTURE.md
-    TASKS.md
-    SECURITY.md
-    TESTING.md
-    AGENTS.md
-    PROMPTS.md
-    PROGRESS.md
-    DECISIONS.md
-    KNOWN_ISSUES.md
+  PRODUCT.md
+  ARCHITECTURE.md
+  TASKS.md
+  SECURITY.md
+  TESTING.md
+  AGENTS.md
+  PROMPTS.md
+  PROGRESS.md
+  DECISIONS.md
+  KNOWN_ISSUES.md
 ```
 
 ## Development Principles

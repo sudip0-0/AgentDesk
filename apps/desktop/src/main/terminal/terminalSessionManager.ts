@@ -2,7 +2,9 @@ import type { WebContents } from "electron";
 import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
 import type { AgentRunStatus } from "../db/repositories/agentRunRepository.js";
+import { getProjectById, listProjects } from "../db/repositories/projectRepository.js";
 import type { TerminalLogWriter } from "../db/terminalLogWriter.js";
+import { isPathInsideRoot } from "../projects/projectPaths.js";
 import { redactSecrets } from "./logRedaction.js";
 import { normalizeTerminalSize, resolveShell, resolveTerminalCwd } from "./terminalConfig.js";
 import type {
@@ -12,6 +14,7 @@ import type {
   TerminalResizeRequest,
   TerminalWriteRequest
 } from "../../shared/terminalTypes.js";
+import type { ProjectSummary } from "../../shared/projectTypes.js";
 
 interface TerminalSession {
   id: string;
@@ -21,10 +24,20 @@ interface TerminalSession {
   pty: IPty;
 }
 
+type ProjectResolver = (projectId?: string) => ProjectSummary | null;
+
+const resolveProjectFromDatabase: ProjectResolver = (projectId) =>
+  (projectId ? getProjectById(projectId) : null) ??
+  listProjects().find((entry) => entry.id !== "default-project") ??
+  null;
+
 export class TerminalSessionManager {
   private readonly sessions = new Map<string, TerminalSession>();
 
-  public constructor(private readonly logWriter: TerminalLogWriter) {}
+  public constructor(
+    private readonly logWriter: TerminalLogWriter,
+    private readonly resolveProject: ProjectResolver = resolveProjectFromDatabase
+  ) {}
 
   public hasActiveSessions(): boolean {
     return this.sessions.size > 0;
@@ -34,7 +47,18 @@ export class TerminalSessionManager {
     request: CreateTerminalRequest,
     webContents: WebContents
   ): CreateTerminalResult {
-    const cwd = resolveTerminalCwd(request.cwd);
+    const project = this.resolveProject(request.projectId);
+
+    if (!project) {
+      throw new Error("Open a project before starting a terminal.");
+    }
+
+    const cwd = resolveTerminalCwd(request.cwd, project.path);
+
+    if (!isPathInsideRoot(project.path, cwd)) {
+      throw new Error("Working directory must be inside the selected project folder.");
+    }
+
     const size = normalizeTerminalSize(request.cols, request.rows);
     const shell = resolveShell(request.shell);
     const id = randomUUID();

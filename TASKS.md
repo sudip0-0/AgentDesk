@@ -97,7 +97,7 @@ Acceptance Criteria:
 
 ### TASK-0201: Implement Project Folder Picker
 
-Status: backlog
+Status: done
 
 Goal:
 Allow users to select a local project folder.
@@ -114,7 +114,7 @@ Acceptance Criteria:
 
 ### TASK-0202: Detect Project Metadata
 
-Status: backlog
+Status: done
 
 Goal:
 Detect package manager, framework, scripts, and git status.
@@ -132,7 +132,7 @@ Acceptance Criteria:
 
 ### TASK-0203: Project Overview Screen
 
-Status: backlog
+Status: done
 
 Goal:
 Create project overview page.

@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Terminal engine implementation has started after the desktop foundation.
+Phase 1 foundation, Phase 2 project workspace, and Phase 5 terminal engine are complete.
 
 ## MVP Definition
 
@@ -27,17 +27,25 @@ AgentDesk MVP is a Windows desktop app that can:
 - Added a separated Electron main process, sandboxed preload bridge, and React renderer.
 - Added root development, lint, typecheck, and production build scripts.
 - Added the first desktop layout with sidebar, top bar, main content area, and renderer fallback UI.
+- Completed TASK-0102: Tailwind CSS v4 with reusable Button, Card, Input, Dialog, Tabs, and Badge components.
+- Completed TASK-0103: SQLite database in app data with Drizzle schema, repeatable migrations, and health probe read/write.
 
-### Terminal Engine
+### Phase 5: Terminal Engine
 
+- Completed TASK-0501: node-pty terminal backend in the Electron main process.
+- Completed TASK-0502: xterm.js renderer with multi-tab terminal UI and resize handling.
+- Completed TASK-0503: chunked terminal log persistence per agent run, paginated transcript viewer, and export.
 - Completed the initial node-pty backend for creating, writing to, resizing, and killing PTY sessions.
 - Added safe terminal IPC through preload instead of exposing shell or Node access to the renderer.
 - Added an xterm.js renderer panel with working-directory selection, terminal input, streamed output, resize forwarding, kill action, and visible error state.
 - Added multi-tab terminal UI, PowerShell/CMD shell selection, IPC validation, secret redaction on streamed output, and close confirmation when sessions are active.
 - Added terminal tests for default shell sizing logic and PTY session startup/output/exit behavior.
-- Completed TASK-0103: SQLite database in app data with Drizzle schema, repeatable migrations, and health probe read/write.
-- Completed TASK-0503: chunked terminal log persistence per agent run, paginated transcript viewer, and export.
-- Completed TASK-0102: Tailwind CSS v4 with reusable Button, Card, Input, Dialog, Tabs, and Badge components.
+
+### Phase 2: Project Workspace
+
+- Completed TASK-0201: native Electron project folder picker with duplicate-safe SQLite persistence.
+- Completed TASK-0202: project metadata detection for package.json, package manager, scripts, git repo, and branch.
+- Completed TASK-0203: project overview screen with metadata, task/run placeholders, and selected-project terminal scoping.
 
 ### Product Discovery
 
@@ -80,9 +88,9 @@ None.
 
 Next focused tasks:
 
-1. TASK-0201: Implement Project Folder Picker.
-2. TASK-0202: Detect Project Metadata.
-3. TASK-0301: Create Task CRUD.
+1. TASK-0301: Create Task CRUD.
+2. TASK-0302: Build Kanban Task Board.
+3. TASK-0401: Implement Prompt Template System.
 
 ## Current Risks
 
