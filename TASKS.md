@@ -263,7 +263,7 @@ Acceptance Criteria:
 
 ### TASK-0501: Add node-pty Terminal Backend
 
-Status: backlog
+Status: done
 
 Goal:
 Create PTY sessions from the Electron main process.
@@ -282,7 +282,7 @@ Acceptance Criteria:
 
 ### TASK-0502: Add xterm.js Renderer
 
-Status: backlog
+Status: running
 
 Goal:
 Display terminal sessions in the renderer.

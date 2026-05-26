@@ -12,7 +12,9 @@
   },
   "include": [
     "electron.vite.config.ts",
+    "apps/desktop/src/shared/**/*.ts",
     "apps/desktop/src/main/**/*.ts",
-    "apps/desktop/src/preload/**/*.ts"
+    "apps/desktop/src/preload/**/*.ts",
+    "apps/desktop/src/**/*.test.ts"
   ]
 }

@@ -18,6 +18,7 @@
     "jsx": "react-jsx"
   },
   "include": [
+    "apps/desktop/src/shared/**/*.ts",
     "apps/desktop/src/renderer/src/**/*.ts",
     "apps/desktop/src/renderer/src/**/*.tsx",
     "apps/desktop/src/renderer/src/**/*.d.ts"

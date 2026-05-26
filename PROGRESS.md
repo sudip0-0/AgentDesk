@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Phase 1 desktop foundation has started.
+Terminal engine implementation has started after the desktop foundation.
 
 ## MVP Definition
 
@@ -27,6 +27,13 @@ AgentDesk MVP is a Windows desktop app that can:
 - Added a separated Electron main process, sandboxed preload bridge, and React renderer.
 - Added root development, lint, typecheck, and production build scripts.
 - Added the first desktop layout with sidebar, top bar, main content area, and renderer fallback UI.
+
+### Terminal Engine
+
+- Completed the initial node-pty backend for creating, writing to, resizing, and killing PTY sessions.
+- Added safe terminal IPC through preload instead of exposing shell or Node access to the renderer.
+- Added an xterm.js renderer panel with working-directory selection, terminal input, streamed output, resize forwarding, kill action, and visible error state.
+- Added terminal tests for default shell sizing logic and PTY session startup/output/exit behavior.
 
 ### Product Discovery
 
@@ -63,14 +70,16 @@ Created initial docs:
 
 ## In Progress
 
-None.
+TASK-0502 remains partially in progress because multiple terminal tabs are not implemented yet.
 
 ## Next Tasks
 
-Start Phase 1:
+Next focused tasks:
 
-1. TASK-0102: Add Tailwind CSS and Base UI System
-2. TASK-0103: Add Local SQLite Database
+1. Complete multiple terminal tab support for TASK-0502.
+2. TASK-0503: Save Terminal Logs.
+3. TASK-0102: Add Tailwind CSS and Base UI System.
+4. TASK-0103: Add Local SQLite Database.
 
 ## Current Risks
 

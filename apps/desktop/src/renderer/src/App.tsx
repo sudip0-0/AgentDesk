@@ -1,4 +1,6 @@
-const navItems = ["Projects", "Tasks", "Runs", "Settings"];
+import { TerminalPanel } from "./components/TerminalPanel";
+
+const navItems = ["Projects", "Terminal", "Tasks", "Runs", "Settings"];
 
 export function App(): React.JSX.Element {
   const appName = window.agentdesk.app.getName();
@@ -18,7 +20,7 @@ export function App(): React.JSX.Element {
         <nav className="nav-list">
           {navItems.map((item) => (
             <button
-              className={item === "Projects" ? "nav-item nav-item-active" : "nav-item"}
+              className={item === "Terminal" ? "nav-item nav-item-active" : "nav-item"}
               key={item}
               type="button"
             >
@@ -31,36 +33,38 @@ export function App(): React.JSX.Element {
       <div className="workspace">
         <header className="topbar">
           <div>
-            <span className="eyebrow">Phase 1</span>
+            <span className="eyebrow">Phase 2</span>
             <h1>{phase}</h1>
           </div>
-          <div className="status-pill">Electron + React ready</div>
+          <div className="status-pill">PTY terminal ready</div>
         </header>
 
         <main className="content" aria-label="AgentDesk home">
           <section className="panel">
-            <h2>Foundation</h2>
+            <h2>Embedded Terminal</h2>
             <p>
-              The desktop shell is ready with a separated Electron main process,
-              safe preload API, and React renderer.
+              Terminal sessions run in the Electron main process and stream through
+              a narrow preload API into the React renderer.
             </p>
           </section>
 
-          <section className="layout-grid" aria-label="Foundation status">
+          <TerminalPanel />
+
+          <section className="layout-grid" aria-label="Terminal status">
             <div className="status-card">
               <span>Main</span>
-              <strong>Window lifecycle</strong>
-              <p>Creates the Electron window and owns native capabilities.</p>
+              <strong>PTY sessions</strong>
+              <p>Creates, tracks, resizes, and kills terminal processes.</p>
             </div>
             <div className="status-card">
               <span>Preload</span>
-              <strong>Safe bridge</strong>
-              <p>Exposes only a minimal read-only API to the renderer.</p>
+              <strong>IPC bridge</strong>
+              <p>Streams data and accepts terminal commands without exposing Node.</p>
             </div>
             <div className="status-card">
               <span>Renderer</span>
-              <strong>React UI</strong>
-              <p>Renders the sidebar, top bar, and main content area.</p>
+              <strong>xterm.js</strong>
+              <p>Displays output, sends input, and mirrors resize events.</p>
             </div>
           </section>
         </main>

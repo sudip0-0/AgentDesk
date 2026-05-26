@@ -1,5 +1,6 @@
 import { app, BrowserWindow, shell } from "electron";
 import { join } from "node:path";
+import { registerTerminalIpc, terminalSessionManager } from "./terminal/terminalIpc.js";
 
 const createMainWindow = (): void => {
   const mainWindow = new BrowserWindow({
@@ -26,6 +27,10 @@ const createMainWindow = (): void => {
     return { action: "deny" };
   });
 
+  mainWindow.webContents.on("destroyed", () => {
+    terminalSessionManager.killForWebContents(mainWindow.webContents.id);
+  });
+
   if (process.env.VITE_DEV_SERVER_URL) {
     void mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
     mainWindow.webContents.openDevTools({ mode: "detach" });
@@ -36,6 +41,7 @@ const createMainWindow = (): void => {
 };
 
 app.whenReady().then(() => {
+  registerTerminalIpc();
   createMainWindow();
 
   app.on("activate", () => {
@@ -43,6 +49,10 @@ app.whenReady().then(() => {
       createMainWindow();
     }
   });
+});
+
+app.on("before-quit", () => {
+  terminalSessionManager.killAll();
 });
 
 app.on("window-all-closed", () => {
