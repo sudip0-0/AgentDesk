@@ -165,6 +165,23 @@ agentdesk/
   KNOWN_ISSUES.md
 ```
 
+## Local Setup
+
+```bash
+npm install
+npm run dev
+```
+
+`better-sqlite3` and `node-pty` are native modules. `npm install` rebuilds them for the pinned Electron version.
+
+If you see a `NODE_MODULE_VERSION` mismatch for `better_sqlite3.node`:
+
+1. Quit AgentDesk completely (Electron locks files on Windows).
+2. Run `npm install` again.
+3. If needed, run `npm run rebuild:native`.
+
+Vitest uses system Node. `npm test` runs `npm run rebuild:node` first so SQLite tests use the correct binary.
+
 ## Development Principles
 
 - Local-first.

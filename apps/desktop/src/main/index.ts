@@ -80,8 +80,27 @@ const createMainWindow = (): BrowserWindow => {
   return mainWindow;
 };
 
+const showStartupError = (title: string, message: string): void => {
+  dialog.showErrorBox(title, message);
+};
+
 app.whenReady().then(() => {
-  initializeDatabase();
+  try {
+    initializeDatabase();
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to initialize the local SQLite database.";
+
+    showStartupError(
+      "AgentDesk database unavailable",
+      `${message}\n\nClose AgentDesk, then run:\n  npm install\n  npm run rebuild:native\n\nFor tests only, run:\n  npm run rebuild:node`
+    );
+    app.quit();
+    return;
+  }
+
   registerDatabaseIpc();
   registerAgentProfileIpc();
   registerProjectIpc();

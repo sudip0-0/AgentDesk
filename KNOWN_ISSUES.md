@@ -2,7 +2,27 @@
 
 ## Known Risks and Issues
 
-## 1. node-pty Windows Setup
+## 1. better-sqlite3 / Electron ABI mismatch
+
+Status: mitigated (pinned Electron + rebuild script)
+
+Problem:
+`better-sqlite3` ships a native `.node` binary. If it is built for system Node (for example `NODE_MODULE_VERSION 127`) but Electron embeds a different ABI (for example `146` on Electron 42), startup fails with a version mismatch error.
+
+Impact:
+The app cannot open SQLite and the main process may log an unhandled promise rejection.
+
+Mitigation:
+
+- Electron is pinned to `35.7.5`, which has published `better-sqlite3` prebuilds.
+- `npm install` runs `scripts/rebuild-native.mjs` to install the Electron binary for SQLite and rebuild `node-pty`.
+- Close AgentDesk before `npm install` so Electron files are not locked on Windows.
+- If the app was started before install finished, run `npm run rebuild:native`.
+- Vitest uses system Node; `pretest` runs `npm rebuild better-sqlite3` for the Node binary.
+
+---
+
+## 2. node-pty Windows Setup
 
 Status: expected risk
 
@@ -17,7 +37,7 @@ Use documented electron rebuild flow and test early on Windows.
 
 ---
 
-## 2. CLI Agent Behavior Differences
+## 3. CLI Agent Behavior Differences
 
 Status: expected risk
 
