@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Planning complete. Ready for Phase 1 implementation.
+Phase 1 desktop foundation has started.
 
 ## MVP Definition
 
@@ -20,6 +20,13 @@ AgentDesk MVP is a Windows desktop app that can:
 - track progress locally
 
 ## Completed
+
+### Phase 1: Desktop App Foundation
+
+- Completed TASK-0101: initialized the Electron, React, and TypeScript desktop app.
+- Added a separated Electron main process, sandboxed preload bridge, and React renderer.
+- Added root development, lint, typecheck, and production build scripts.
+- Added the first desktop layout with sidebar, top bar, main content area, and renderer fallback UI.
 
 ### Product Discovery
 
@@ -62,9 +69,8 @@ None.
 
 Start Phase 1:
 
-1. TASK-0101: Initialize Electron React TypeScript App
-2. TASK-0102: Add Tailwind CSS and Base UI System
-3. TASK-0103: Add Local SQLite Database
+1. TASK-0102: Add Tailwind CSS and Base UI System
+2. TASK-0103: Add Local SQLite Database
 
 ## Current Risks
 
