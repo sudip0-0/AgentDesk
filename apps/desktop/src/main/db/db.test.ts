@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -188,7 +188,7 @@ describe("database", () => {
 
     const defaultCommands = listQualityCommands(project.id);
     expect(defaultCommands.map((command) => command.command)).toEqual(
-      expect.arrayContaining(["npm run lint", "npm run typecheck", "npm test", "npm run build"])
+      expect.arrayContaining(["npm run lint", "npm run typecheck", "npm run test", "npm run build"])
     );
 
     const customCommand = createQualityCommand({
@@ -225,5 +225,72 @@ describe("database", () => {
 
     expect(fixTask.title).toContain("Fix quality check");
     expect(fixTask.context).toContain("Type error");
+  });
+
+  it("seeds quality commands from package.json scripts", () => {
+    const projectDirectory = join(databaseDirectory, "pnpm-project");
+    mkdirSync(projectDirectory, { recursive: true });
+    writeFileSync(
+      join(projectDirectory, "package.json"),
+      JSON.stringify({
+        scripts: {
+          lint: "eslint .",
+          test: "vitest run"
+        }
+      })
+    );
+    writeFileSync(join(projectDirectory, "pnpm-lock.yaml"), "");
+
+    const { project } = openProjectFromPath(projectDirectory);
+    const defaultCommands = listQualityCommands(project.id);
+
+    expect(defaultCommands.map((command) => command.command)).toEqual(
+      expect.arrayContaining(["pnpm run lint", "pnpm run test"])
+    );
+    expect(defaultCommands.some((command) => command.command.includes("typecheck"))).toBe(false);
+  });
+
+  it("merges original task context into fix tasks", () => {
+    const projectDirectory = join(databaseDirectory, "fix-context-project");
+    mkdirSync(projectDirectory, { recursive: true });
+    const { project } = openProjectFromPath(projectDirectory);
+
+    const sourceTask = createTask({
+      projectId: project.id,
+      title: "Implement quality runner",
+      description: "Wire quality checks.",
+      status: "running",
+      priority: "high",
+      goal: "Run checks from the task board.",
+      context: "Phase 7 quality checks.",
+      acceptanceCriteria: "Checks are linked to tasks.",
+      filesLikelyAffected: "apps/desktop/src/main/quality",
+      qualityCommands: "npm test",
+      securityNotes: "Keep IPC validation.",
+      doneDefinition: "Checks pass.",
+      dependsOn: ""
+    });
+
+    const failedCheck = saveQualityCheck({
+      projectId: project.id,
+      taskId: sourceTask.id,
+      label: "Test",
+      command: "npm test",
+      status: "failed",
+      output: "Assertion failed.",
+      exitCode: 1,
+      startedAt: new Date(0).toISOString(),
+      finishedAt: new Date(1).toISOString()
+    });
+
+    const fixTask = createFixTaskFromQualityCheck({
+      projectId: project.id,
+      qualityCheckId: failedCheck.id
+    });
+
+    expect(fixTask.title).toContain(sourceTask.title);
+    expect(fixTask.context).toContain(sourceTask.goal);
+    expect(fixTask.context).toContain("Assertion failed.");
+    expect(fixTask.dependsOn).toBe(sourceTask.id);
   });
 });

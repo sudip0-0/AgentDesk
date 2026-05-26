@@ -13,6 +13,7 @@ import type {
   TerminalShell
 } from "../../../shared/terminalTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
+import type { QualityRunContext } from "../../../shared/qualityTypes";
 import type { TaskTerminalLaunch } from "../../../shared/taskLaunchTypes";
 import { TranscriptPanel } from "./TranscriptPanel";
 import { Badge } from "./ui/Badge";
@@ -262,6 +263,7 @@ interface TerminalPanelProps {
   promptSendRequest: PromptSendRequest | null;
   onLaunchHandled: () => void;
   onPromptSendHandled: () => void;
+  onRunQualityChecks: (context: QualityRunContext) => void;
   onTaskStatusChanged: () => void;
 }
 
@@ -271,6 +273,7 @@ export function TerminalPanel({
   promptSendRequest,
   onLaunchHandled,
   onPromptSendHandled,
+  onRunQualityChecks,
   onTaskStatusChanged
 }: TerminalPanelProps): React.JSX.Element {
   const initialState = useRef<{ tabs: TerminalTab[]; activeId: string } | null>(null);
@@ -726,6 +729,23 @@ export function TerminalPanel({
             variant="secondary"
           >
             Transcript
+          </Button>
+          <Button
+            disabled={!project || (!activeTab?.taskId && !activeTab?.runId)}
+            onClick={() => {
+              if (!activeTab) {
+                return;
+              }
+
+              onRunQualityChecks({
+                taskId: activeTab.taskId,
+                agentRunId: activeTab.runId,
+                taskTitle: activeTab.taskId ? activeTab.title : null
+              });
+            }}
+            variant="secondary"
+          >
+            Run Quality Checks
           </Button>
         </div>
       </div>

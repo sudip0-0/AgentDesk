@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   QualityCheckRecord,
   QualityCheckStatus,
   QualityCommandInput,
-  QualityCommandRecord
+  QualityCommandRecord,
+  QualityRunContext
 } from "../../../shared/qualityTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import { Badge } from "./ui/Badge";
@@ -33,11 +34,30 @@ const emptyCommand = (projectId: string): QualityCommandInput => ({
   timeoutMs: 120_000
 });
 
+const summarizeRunResults = (results: QualityCheckRecord[]): string => {
+  const requiredFailures = results.filter((result) => result.status === "failed").length;
+  const skippedOptional = results.filter((result) => result.status === "skipped").length;
+
+  if (requiredFailures > 0) {
+    return `${requiredFailures} required check(s) failed.`;
+  }
+
+  if (skippedOptional > 0) {
+    return `Quality checks finished with ${skippedOptional} optional check(s) skipped.`;
+  }
+
+  return "All quality checks passed.";
+};
+
 export function QualityPanel({
   project,
+  runContext,
+  onClearRunContext,
   onFixTaskCreated
 }: {
   project: ProjectSummary | null;
+  runContext?: QualityRunContext | null;
+  onClearRunContext?: () => void;
   onFixTaskCreated: () => void;
 }): React.JSX.Element {
   const [commands, setCommands] = useState<QualityCommandRecord[]>([]);
@@ -49,16 +69,22 @@ export function QualityPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [runConfirmOpen, setRunConfirmOpen] = useState(false);
+  const [deleteConfirmCommand, setDeleteConfirmCommand] = useState<QualityCommandRecord | null>(null);
 
   const selectedCheck = checks.find((check) => check.id === selectedCheckId) ?? checks[0] ?? null;
 
-  const loadQualityData = async (projectId: string): Promise<void> => {
+  const loadQualityData = useCallback(async (projectId: string): Promise<void> => {
     setError(null);
 
     try {
       const [loadedCommands, loadedChecks]: [QualityCommandRecord[], QualityCheckRecord[]] = await Promise.all([
         window.agentdesk.quality.listCommands(projectId),
-        window.agentdesk.quality.listChecks({ projectId })
+        window.agentdesk.quality.listChecks({
+          projectId,
+          taskId: runContext?.taskId ?? undefined,
+          agentRunId: runContext?.agentRunId ?? undefined
+        })
       ]);
 
       setCommands(loadedCommands);
@@ -69,7 +95,7 @@ export function QualityPanel({
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load quality data.");
     }
-  };
+  }, [runContext?.agentRunId, runContext?.taskId]);
 
   useEffect(() => {
     setMessage(null);
@@ -85,7 +111,7 @@ export function QualityPanel({
     }
 
     void loadQualityData(project.id);
-  }, [project]);
+  }, [loadQualityData, project]);
 
   const openCreate = (): void => {
     if (!project) {
@@ -134,23 +160,27 @@ export function QualityPanel({
     }
   };
 
-  const deleteCommand = async (command: QualityCommandRecord): Promise<void> => {
-    if (!project) {
+  const confirmDeleteCommand = async (): Promise<void> => {
+    if (!project || !deleteConfirmCommand) {
       return;
     }
 
     setError(null);
 
     try {
-      await window.agentdesk.quality.deleteCommand({ projectId: project.id, id: command.id });
+      await window.agentdesk.quality.deleteCommand({
+        projectId: project.id,
+        id: deleteConfirmCommand.id
+      });
       setMessage("Quality command deleted.");
+      setDeleteConfirmCommand(null);
       await loadQualityData(project.id);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete quality command.");
     }
   };
 
-  const runChecks = async (): Promise<void> => {
+  const executeRun = async (): Promise<void> => {
     if (!project) {
       return;
     }
@@ -158,12 +188,17 @@ export function QualityPanel({
     setIsRunning(true);
     setError(null);
     setMessage(null);
+    setRunConfirmOpen(false);
 
     try {
-      const results = await window.agentdesk.quality.run({ projectId: project.id });
+      const results = await window.agentdesk.quality.run({
+        projectId: project.id,
+        taskId: runContext?.taskId ?? undefined,
+        agentRunId: runContext?.agentRunId ?? undefined
+      });
       setChecks(results);
       setSelectedCheckId(results[0]?.id ?? null);
-      setMessage("Quality checks finished.");
+      setMessage(summarizeRunResults(results));
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Failed to run quality checks.");
     } finally {
@@ -212,6 +247,21 @@ export function QualityPanel({
           </Button>
         </div>
 
+        {runContext?.taskId || runContext?.agentRunId ? (
+          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
+            <p>
+              Linked context:
+              {runContext.taskTitle ? ` task "${runContext.taskTitle}"` : ""}
+              {runContext.agentRunId ? ` · run ${runContext.agentRunId.slice(0, 8)}` : ""}
+            </p>
+            {onClearRunContext ? (
+              <Button className="mt-2" onClick={onClearRunContext} size="sm" variant="ghost">
+                Clear link
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         {message ? (
           <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
             {message}
@@ -224,7 +274,11 @@ export function QualityPanel({
           </div>
         ) : null}
 
-        <Button disabled={isRunning || commands.length === 0} onClick={() => void runChecks()} variant="primary">
+        <Button
+          disabled={isRunning || commands.length === 0}
+          onClick={() => setRunConfirmOpen(true)}
+          variant="primary"
+        >
           {isRunning ? "Running..." : "Run All Checks"}
         </Button>
 
@@ -246,7 +300,7 @@ export function QualityPanel({
               <Button onClick={() => openEdit(command)} size="sm" variant="secondary">
                 Edit
               </Button>
-              <Button onClick={() => void deleteCommand(command)} size="sm" variant="danger">
+              <Button onClick={() => setDeleteConfirmCommand(command)} size="sm" variant="danger">
                 Delete
               </Button>
             </div>
@@ -288,6 +342,50 @@ export function QualityPanel({
           <QualityResultDetail check={selectedCheck} onCreateFixTask={(check) => void createFixTask(check)} />
         </div>
       </section>
+
+      <Dialog
+        description="Commands run in the selected project folder with shell execution. Review the list before continuing."
+        onClose={() => setRunConfirmOpen(false)}
+        open={runConfirmOpen}
+        title="Run all quality checks?"
+      >
+        <ul className="grid gap-2 text-sm text-muted">
+          {commands.map((command) => (
+            <li className="rounded-md border border-border bg-[#0d1117] px-3 py-2" key={command.id}>
+              <span className="font-bold text-text">{command.label}</span>
+              <span className="mt-1 block break-all">{command.command}</span>
+              <span className="mt-1 block text-xs">
+                {command.required ? "Required" : "Optional"}
+                {command.timeoutMs ? ` · timeout ${command.timeoutMs}ms` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex justify-end gap-2 border-t border-border pt-4">
+          <Button onClick={() => setRunConfirmOpen(false)} variant="ghost">
+            Cancel
+          </Button>
+          <Button disabled={isRunning} onClick={() => void executeRun()} variant="primary">
+            Run Checks
+          </Button>
+        </div>
+      </Dialog>
+
+      <Dialog
+        description="This removes the command from the project configuration. Existing check history is kept."
+        onClose={() => setDeleteConfirmCommand(null)}
+        open={deleteConfirmCommand !== null}
+        title={deleteConfirmCommand ? `Delete "${deleteConfirmCommand.label}"?` : "Delete command"}
+      >
+        <div className="flex justify-end gap-2 border-t border-border pt-4">
+          <Button onClick={() => setDeleteConfirmCommand(null)} variant="ghost">
+            Cancel
+          </Button>
+          <Button onClick={() => void confirmDeleteCommand()} variant="danger">
+            Delete Command
+          </Button>
+        </div>
+      </Dialog>
 
       <QualityCommandDialog
         draft={draft}
@@ -410,6 +508,9 @@ function QualityCommandDialog({
             />
             Required
           </label>
+          <p className="text-xs text-muted">
+            Optional checks that fail are marked skipped and do not fail the overall required run.
+          </p>
           <div className="flex justify-end gap-2 border-t border-border pt-4">
             <Button onClick={onClose} variant="ghost">
               Cancel

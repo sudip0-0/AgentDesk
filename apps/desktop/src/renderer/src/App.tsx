@@ -7,6 +7,7 @@ import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
 import type { TaskRecord } from "../../shared/taskTypes";
 import { AgentProfilesPanel } from "./components/AgentProfilesPanel";
 import { QualityPanel } from "./components/QualityPanel";
+import type { QualityRunContext } from "../../shared/qualityTypes";
 import { TaskBoard } from "./components/TaskBoard";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { Badge } from "./components/ui/Badge";
@@ -39,6 +40,7 @@ export function App(): React.JSX.Element {
   const [isOpeningProject, setIsOpeningProject] = useState(false);
   const [terminalLaunch, setTerminalLaunch] = useState<TaskTerminalLaunch | null>(null);
   const [promptSendRequest, setPromptSendRequest] = useState<PromptSendRequest | null>(null);
+  const [qualityRunContext, setQualityRunContext] = useState<QualityRunContext | null>(null);
 
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
 
@@ -240,6 +242,10 @@ export function App(): React.JSX.Element {
               launchRequest={terminalLaunch}
               onLaunchHandled={() => setTerminalLaunch(null)}
               onPromptSendHandled={() => setPromptSendRequest(null)}
+              onRunQualityChecks={(context) => {
+                setQualityRunContext(context);
+                setActiveNav("quality");
+              }}
               onTaskStatusChanged={refreshOverview}
               promptSendRequest={promptSendRequest}
               project={activeProject}
@@ -261,6 +267,10 @@ export function App(): React.JSX.Element {
                 });
                 setActiveNav("terminal");
               }}
+              onRunQualityChecks={(task) => {
+                setQualityRunContext({ taskId: task.id, taskTitle: task.title });
+                setActiveNav("quality");
+              }}
               onSendPromptToTerminal={(request: PromptSendRequest) => {
                 setPromptSendRequest(request);
                 setActiveNav("terminal");
@@ -273,7 +283,12 @@ export function App(): React.JSX.Element {
           {activeNav === "agents" ? <AgentProfilesPanel /> : null}
 
           {activeNav === "quality" ? (
-            <QualityPanel onFixTaskCreated={refreshOverview} project={activeProject} />
+            <QualityPanel
+              onClearRunContext={() => setQualityRunContext(null)}
+              onFixTaskCreated={refreshOverview}
+              project={activeProject}
+              runContext={qualityRunContext}
+            />
           ) : null}
 
           <section className="grid gap-3 md:grid-cols-3">

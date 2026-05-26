@@ -55,6 +55,7 @@ interface TaskBoardProps {
   project: ProjectSummary | null;
   onTasksChanged: () => void;
   onLaunchInTerminal: (task: TaskRecord, agentProfile?: AgentProfileRecord) => void;
+  onRunQualityChecks: (task: TaskRecord) => void;
   onSendPromptToTerminal: (request: PromptSendRequest) => void;
 }
 
@@ -62,6 +63,7 @@ export function TaskBoard({
   project,
   onTasksChanged,
   onLaunchInTerminal,
+  onRunQualityChecks,
   onSendPromptToTerminal
 }: TaskBoardProps): React.JSX.Element {
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
@@ -407,6 +409,7 @@ export function TaskBoard({
         onEdit={openEditDialog}
         onFixContextChange={setFixContext}
         agentProfiles={agentProfiles}
+        onRunQualityChecks={onRunQualityChecks}
         onLaunchInTerminal={(task, profile) => {
           if (!profile || !project) {
             onLaunchInTerminal(task);
@@ -566,6 +569,7 @@ function TaskDetailPanel({
   onCopyPrompt,
   onFixContextChange,
   onLaunchInTerminal,
+  onRunQualityChecks,
   onSendPromptToTerminal,
   onStatusChange,
   selectedAgentProfileId,
@@ -582,6 +586,7 @@ function TaskDetailPanel({
   onCopyPrompt: (task: TaskRecord, templateId: PromptTemplateId) => void;
   onFixContextChange: (value: string) => void;
   onLaunchInTerminal: (task: TaskRecord, profile?: AgentProfileRecord) => void;
+  onRunQualityChecks: (task: TaskRecord) => void;
   onSendPromptToTerminal: (task: TaskRecord, templateId: PromptTemplateId) => void;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
   selectedAgentProfileId: string;
@@ -651,6 +656,9 @@ function TaskDetailPanel({
             variant="primary"
           >
             Launch Agent
+          </Button>
+          <Button onClick={() => onRunQualityChecks(task)} variant="secondary">
+            Run Quality Checks
           </Button>
           <Button onClick={() => onEdit(task)} variant="secondary">
             Edit

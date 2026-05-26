@@ -82,7 +82,7 @@ export interface AgentDeskApi {
     deleteCommand: (input: QualityCommandDeleteInput) => Promise<void>;
     run: (input: RunQualityChecksInput) => Promise<QualityCheckRecord[]>;
     listChecks: (input: ListQualityChecksInput) => Promise<QualityCheckRecord[]>;
-    createFixTask: (input: CreateFixTaskInput) => Promise<unknown>;
+    createFixTask: (input: CreateFixTaskInput) => Promise<TaskRecord>;
   };
   terminals: {
     create: (request: CreateTerminalRequest) => Promise<CreateTerminalResult>;

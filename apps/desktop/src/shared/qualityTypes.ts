@@ -1,9 +1,18 @@
-export const qualityCommandDefaults = [
+import type { DefaultQualityCommand } from "./qualityDefaults.js";
+
+/** Fallback defaults when the project has no package.json. */
+export const qualityCommandDefaults: DefaultQualityCommand[] = [
   { label: "Lint", command: "npm run lint", required: true, timeoutMs: 120_000 },
   { label: "Typecheck", command: "npm run typecheck", required: true, timeoutMs: 120_000 },
-  { label: "Test", command: "npm test", required: true, timeoutMs: 120_000 },
+  { label: "Test", command: "npm run test", required: true, timeoutMs: 120_000 },
   { label: "Build", command: "npm run build", required: true, timeoutMs: 180_000 }
-] as const;
+];
+
+export interface QualityRunContext {
+  taskId?: string | null;
+  agentRunId?: string | null;
+  taskTitle?: string | null;
+}
 
 export type QualityCheckStatus = "passed" | "failed" | "skipped";
 

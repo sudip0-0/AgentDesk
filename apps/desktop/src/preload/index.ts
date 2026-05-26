@@ -124,8 +124,8 @@ const agentdeskApi: AgentDeskApi = {
       ipcRenderer.invoke("quality:run", input) as Promise<QualityCheckRecord[]>,
     listChecks: (input: ListQualityChecksInput): Promise<QualityCheckRecord[]> =>
       ipcRenderer.invoke("quality:list-checks", input) as Promise<QualityCheckRecord[]>,
-    createFixTask: (input: CreateFixTaskInput): Promise<unknown> =>
-      ipcRenderer.invoke("quality:create-fix-task", input) as Promise<unknown>
+    createFixTask: (input: CreateFixTaskInput): Promise<TaskRecord> =>
+      ipcRenderer.invoke("quality:create-fix-task", input) as Promise<TaskRecord>
   },
   terminals: {
     create: (request: CreateTerminalRequest): Promise<CreateTerminalResult> =>

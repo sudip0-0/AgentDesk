@@ -9,9 +9,12 @@ import type {
   QualityCommandRecord,
   QualityCommandUpdateInput
 } from "../../../shared/qualityTypes.js";
+import { buildDefaultQualityCommandsFromMetadata } from "../../../shared/qualityDefaults.js";
 import { qualityCommandDefaults } from "../../../shared/qualityTypes.js";
+import { detectProjectMetadata } from "../../projects/detectProjectMetadata.js";
 import { assertRunBelongsToProject } from "./agentRunRepository.js";
-import { assertTaskBelongsToProject, createTask } from "./taskRepository.js";
+import { getProjectById } from "./projectRepository.js";
+import { assertTaskBelongsToProject, createTask, getTaskById } from "./taskRepository.js";
 import { getDatabase } from "../client.js";
 import { qualityChecks, qualityCommands } from "../schema.js";
 
@@ -53,9 +56,18 @@ export const ensureDefaultQualityCommands = (projectId: string): void => {
     return;
   }
 
+  const project = getProjectById(projectId);
+  const metadata = project ? detectProjectMetadata(project.path) : null;
+  const detectedDefaults = metadata ? buildDefaultQualityCommandsFromMetadata(metadata) : [];
+  const commandsToSeed = metadata?.hasPackageJson ? detectedDefaults : qualityCommandDefaults;
+
+  if (commandsToSeed.length === 0) {
+    return;
+  }
+
   const now = new Date().toISOString();
 
-  for (const defaultCommand of qualityCommandDefaults) {
+  for (const defaultCommand of commandsToSeed) {
     database.insert(qualityCommands).values({
       id: randomUUID(),
       projectId,
@@ -218,18 +230,37 @@ export const createFixTaskFromQualityCheck = (input: CreateFixTaskInput) => {
     throw new Error("Only failed checks can create fix tasks.");
   }
 
+  const sourceTask = check.taskId ? getTaskById(check.taskId) : null;
+  const originalTaskContext = sourceTask
+    ? [
+        `Original task: ${sourceTask.title}`,
+        `Goal: ${sourceTask.goal}`,
+        `Context: ${sourceTask.context}`,
+        `Acceptance criteria: ${sourceTask.acceptanceCriteria}`,
+        `Files likely affected: ${sourceTask.filesLikelyAffected}`
+      ].join("\n")
+    : "";
+
+  const contextSections = [
+    originalTaskContext,
+    `Failed command: ${check.command}`,
+    `Failed command output:\n\n${check.output ?? ""}`
+  ].filter((section) => section.length > 0);
+
   return createTask({
     projectId: input.projectId,
-    title: `Fix quality check: ${check.label}`,
+    title: sourceTask ? `Fix: ${sourceTask.title} (${check.label})` : `Fix quality check: ${check.label}`,
     description: `Resolve failed command: ${check.command}`,
     status: "backlog",
     priority: "high",
-    goal: `Make the "${check.label}" quality check pass.`,
-    context: `Failed command output:\n\n${check.output ?? ""}`,
+    goal: sourceTask
+      ? `Fix the "${check.label}" failure for "${sourceTask.title}".`
+      : `Make the "${check.label}" quality check pass.`,
+    context: contextSections.join("\n\n"),
     acceptanceCriteria: `The command "${check.command}" completes successfully.`,
-    filesLikelyAffected: "",
+    filesLikelyAffected: sourceTask?.filesLikelyAffected ?? "",
     qualityCommands: check.command,
-    securityNotes: "Preserve existing safety confirmations and Electron security boundaries.",
+    securityNotes: sourceTask?.securityNotes ?? "Preserve existing safety confirmations and Electron security boundaries.",
     doneDefinition: "The failed quality check passes and any related checks are reported honestly.",
     dependsOn: check.taskId ?? ""
   });

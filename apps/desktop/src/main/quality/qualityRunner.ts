@@ -7,6 +7,7 @@ import {
 } from "../db/repositories/qualityRepository.js";
 import { assertRunBelongsToProject } from "../db/repositories/agentRunRepository.js";
 import { assertTaskBelongsToProject } from "../db/repositories/taskRepository.js";
+import { redactSecrets } from "../terminal/logRedaction.js";
 
 const MAX_OUTPUT_LENGTH = 120_000;
 
@@ -44,7 +45,7 @@ const runCommand = async (input: {
             output += `\n[AgentDesk timed out after ${input.timeoutMs}ms]`;
             child.kill();
             resolve({
-              output: truncateOutput(output),
+              output: truncateOutput(redactSecrets(output)),
               exitCode: null,
               timedOut: true
             });
@@ -59,7 +60,21 @@ const runCommand = async (input: {
     });
 
     child.on("error", (error) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+
       output += `\n[AgentDesk failed to start command: ${error.message}]`;
+      resolve({
+        output: truncateOutput(redactSecrets(output)),
+        exitCode: null,
+        timedOut: false
+      });
     });
 
     child.on("close", (code) => {
@@ -73,7 +88,7 @@ const runCommand = async (input: {
       }
 
       resolve({
-        output: truncateOutput(output),
+        output: truncateOutput(redactSecrets(output)),
         exitCode: code,
         timedOut: false
       });
@@ -126,7 +141,18 @@ export const runQualityChecks = async (
       cwd: project.path,
       timeoutMs: command.timeoutMs
     });
-    const status = result.exitCode === 0 && !result.timedOut ? "passed" : "failed";
+    const succeeded = result.exitCode === 0 && !result.timedOut;
+    let status: QualityCheckRecord["status"];
+    let output = result.output;
+
+    if (succeeded) {
+      status = "passed";
+    } else if (command.required) {
+      status = "failed";
+    } else {
+      status = "skipped";
+      output = `${output}\n[Optional check failed and was marked as skipped.]`;
+    }
 
     results.push(
       saveQualityCheck({
@@ -136,7 +162,7 @@ export const runQualityChecks = async (
         label: command.label,
         command: command.command,
         status,
-        output: result.output,
+        output,
         exitCode: result.exitCode,
         startedAt,
         finishedAt: new Date().toISOString()
