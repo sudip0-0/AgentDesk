@@ -152,7 +152,7 @@ Acceptance Criteria:
 
 ### TASK-0301: Create Task CRUD
 
-Status: backlog
+Status: done
 
 Goal:
 Allow users to create, edit, delete, and view tasks.
@@ -169,7 +169,7 @@ Acceptance Criteria:
 
 ### TASK-0302: Build Kanban Task Board
 
-Status: backlog
+Status: done
 
 Goal:
 Create the main task board.
@@ -186,7 +186,7 @@ Acceptance Criteria:
 
 ### TASK-0303: Add Task Contract Template
 
-Status: backlog
+Status: done
 
 Goal:
 Add structured task contract fields.

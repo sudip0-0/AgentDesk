@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { DatabaseHealth } from "../../shared/dbTypes";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../shared/projectTypes";
+import { TaskBoard } from "./components/TaskBoard";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { Badge } from "./components/ui/Badge";
 import { Button } from "./components/ui/Button";
@@ -95,6 +96,22 @@ export function App(): React.JSX.Element {
     };
   }, [activeProjectId]);
 
+  const refreshOverview = (): void => {
+    if (!activeProjectId) {
+      return;
+    }
+
+    void window.agentdesk.projects
+      .getOverview(activeProjectId)
+      .then((data: ProjectOverview) => {
+        setOverview(data);
+        setOverviewError(null);
+      })
+      .catch((error: unknown) => {
+        setOverviewError(error instanceof Error ? error.message : "Failed to refresh project overview.");
+      });
+  };
+
   const openProjectFolder = async (): Promise<void> => {
     setIsOpeningProject(true);
     setProjectMessage(null);
@@ -132,7 +149,7 @@ export function App(): React.JSX.Element {
       <div className="grid min-w-0 grid-rows-[auto_1fr]">
         <header className="flex items-center justify-between gap-4 border-b border-border bg-[#151b22] px-6 py-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 2</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 3</span>
             <h1 className="mt-1 text-xl font-bold text-text">{phase}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -210,6 +227,10 @@ export function App(): React.JSX.Element {
 
           {activeNav === "terminal" ? <TerminalPanel project={activeProject} /> : null}
 
+          {activeNav === "tasks" ? (
+            <TaskBoard onTasksChanged={refreshOverview} project={activeProject} />
+          ) : null}
+
           <section className="grid gap-3 md:grid-cols-3">
             <Card>
               <Badge className="mb-2">Main</Badge>
@@ -234,7 +255,7 @@ export function App(): React.JSX.Element {
             </Card>
           </section>
 
-          {activeNav !== "terminal" && activeNav !== "projects" ? (
+          {activeNav !== "terminal" && activeNav !== "projects" && activeNav !== "tasks" ? (
             <Card className={cn("border-dashed")}>
               <CardTitle>{navItems.find((item) => item.id === activeNav)?.label}</CardTitle>
               <CardDescription>This screen is planned for a later phase.</CardDescription>

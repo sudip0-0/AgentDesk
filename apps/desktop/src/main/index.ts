@@ -4,6 +4,7 @@ import { initializeDatabase, shutdownDatabase } from "./db/initDatabase.js";
 import { registerDatabaseIpc } from "./ipc/dbIpc.js";
 import { registerRunLogIpc } from "./ipc/runLogIpc.js";
 import { registerProjectIpc } from "./projects/projectIpc.js";
+import { registerTaskIpc } from "./tasks/taskIpc.js";
 import { registerTerminalIpc, terminalSessionManager } from "./terminal/terminalIpc.js";
 
 let isQuitting = false;
@@ -78,6 +79,7 @@ app.whenReady().then(() => {
   initializeDatabase();
   registerDatabaseIpc();
   registerProjectIpc();
+  registerTaskIpc();
   registerRunLogIpc();
   registerTerminalIpc();
   createMainWindow();

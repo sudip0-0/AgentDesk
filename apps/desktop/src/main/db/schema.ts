@@ -21,9 +21,13 @@ export const tasks = sqliteTable("tasks", {
   description: text("description"),
   status: text("status").notNull(),
   priority: text("priority"),
+  goal: text("goal"),
+  context: text("context"),
   acceptanceCriteria: text("acceptance_criteria"),
+  filesLikelyAffected: text("files_likely_affected"),
   qualityCommands: text("quality_commands"),
   securityNotes: text("security_notes"),
+  doneDefinition: text("done_definition"),
   dependsOn: text("depends_on"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull()

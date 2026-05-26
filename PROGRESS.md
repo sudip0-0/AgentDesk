@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-Phase 1 foundation, Phase 2 project workspace, and Phase 5 terminal engine are complete.
+Phase 1 foundation, Phase 2 project workspace, Phase 3 task board, and Phase 5 terminal engine are complete.
 
 ## MVP Definition
 
@@ -48,6 +48,13 @@ AgentDesk MVP is a Windows desktop app that can:
 - Completed TASK-0203: project overview screen with live task summary, recent runs, next-task hint, and selected-project terminal scoping.
 - Linked agent runs and transcript access to the selected project id with validated IPC.
 
+### Phase 3: Task Board
+
+- Completed TASK-0301: task CRUD with SQLite persistence and validated IPC.
+- Completed TASK-0302: kanban board with Backlog, Ready, Running, Needs Review, Failed, and Done columns.
+- Completed TASK-0303: structured task contract fields for goal, context, acceptance criteria, likely files, quality commands, security notes, and done definition.
+- Added task detail panel, status changes, delete confirmation, and empty states.
+
 ### Product Discovery
 
 - Defined desktop-first direction.
@@ -89,9 +96,9 @@ None.
 
 Next focused tasks:
 
-1. TASK-0301: Create Task CRUD.
-2. TASK-0302: Build Kanban Task Board.
-3. TASK-0401: Implement Prompt Template System.
+1. TASK-0401: Implement Prompt Template System.
+2. TASK-0402: Generate Implementation Prompt from Task.
+3. TASK-0403: Generate Review and Fix Prompts.
 
 ## Current Risks
 

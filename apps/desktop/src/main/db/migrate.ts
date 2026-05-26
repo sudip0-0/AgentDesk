@@ -1,7 +1,17 @@
 import type { Database as SqliteDatabase } from "better-sqlite3";
 import { INITIAL_MIGRATION_SQL } from "./migrations/0001_initial.js";
+import { TASK_CONTRACT_FIELDS_MIGRATION_SQL } from "./migrations/0002_task_contract_fields.js";
 
-const MIGRATION_ID = "0001_initial";
+const migrations = [
+  {
+    id: "0001_initial",
+    sql: INITIAL_MIGRATION_SQL
+  },
+  {
+    id: "0002_task_contract_fields",
+    sql: TASK_CONTRACT_FIELDS_MIGRATION_SQL
+  }
+];
 
 export const runMigrations = (database: SqliteDatabase): void => {
   database.exec(`
@@ -11,20 +21,22 @@ export const runMigrations = (database: SqliteDatabase): void => {
     );
   `);
 
-  const applied = database
-    .prepare("SELECT id FROM schema_migrations WHERE id = ?")
-    .get(MIGRATION_ID) as { id: string } | undefined;
-
-  if (applied) {
-    return;
-  }
-
-  const applyMigration = database.transaction(() => {
-    database.exec(INITIAL_MIGRATION_SQL);
+  const applyMigration = database.transaction((id: string, migrationSql: string) => {
+    database.exec(migrationSql);
     database
       .prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)")
-      .run(MIGRATION_ID, new Date().toISOString());
+      .run(id, new Date().toISOString());
   });
 
-  applyMigration();
+  for (const migration of migrations) {
+    const applied = database
+      .prepare("SELECT id FROM schema_migrations WHERE id = ?")
+      .get(migration.id) as { id: string } | undefined;
+
+    if (applied) {
+      continue;
+    }
+
+    applyMigration(migration.id, migration.sql);
+  }
 };

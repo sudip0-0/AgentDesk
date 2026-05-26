@@ -17,6 +17,13 @@ import type {
   TerminalResizeRequest,
   TerminalWriteRequest
 } from "./terminalTypes.js";
+import type {
+  TaskDeleteInput,
+  TaskInput,
+  TaskRecord,
+  TaskStatusUpdateInput,
+  TaskUpdateInput
+} from "./taskTypes.js";
 
 type Unsubscribe = () => void;
 
@@ -32,6 +39,13 @@ export interface AgentDeskApi {
     list: () => Promise<ProjectSummary[]>;
     openFolder: () => Promise<OpenProjectResult | null>;
     getOverview: (projectId: string) => Promise<ProjectOverview>;
+  };
+  tasks: {
+    list: (projectId: string) => Promise<TaskRecord[]>;
+    create: (input: TaskInput) => Promise<TaskRecord>;
+    update: (input: TaskUpdateInput) => Promise<TaskRecord>;
+    setStatus: (input: TaskStatusUpdateInput) => Promise<TaskRecord>;
+    delete: (input: TaskDeleteInput) => Promise<void>;
   };
   runs: {
     getLogMeta: (request: RunLogRequest) => Promise<TerminalLogMeta>;

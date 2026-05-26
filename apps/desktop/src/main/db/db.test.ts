@@ -10,6 +10,13 @@ import { ensureDefaultProject } from "./seed.js";
 import { openProjectFromPath } from "./repositories/projectRepository.js";
 import { startAgentRun, finishAgentRun } from "./repositories/agentRunRepository.js";
 import {
+  createTask,
+  deleteTask,
+  listTasks,
+  setTaskStatus,
+  updateTask
+} from "./repositories/taskRepository.js";
+import {
   appendTerminalLogChunk,
   buildTranscript,
   getTerminalLogMeta,
@@ -41,7 +48,7 @@ describe("database", () => {
     runMigrations(sqlite);
 
     const rows = sqlite.prepare("SELECT id FROM schema_migrations").all() as { id: string }[];
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(2);
     sqlite.close();
   });
 
@@ -73,5 +80,55 @@ describe("database", () => {
     expect(buildTranscript(runId)).toBe("line-one\nline-two\n");
 
     finishAgentRun(runId, "completed", 0);
+  });
+
+  it("creates, updates, moves, and deletes task contracts", () => {
+    ensureDefaultProject();
+    const projectDirectory = join(databaseDirectory, "task-project");
+    mkdirSync(projectDirectory, { recursive: true });
+    const { project } = openProjectFromPath(projectDirectory);
+
+    const task = createTask({
+      projectId: project.id,
+      title: "Implement task board",
+      description: "Create persisted task management.",
+      status: "backlog",
+      priority: "high",
+      goal: "Track AgentDesk work.",
+      context: "Phase 3 task board.",
+      acceptanceCriteria: "Tasks can be created and grouped.",
+      filesLikelyAffected: "apps/desktop/src",
+      qualityCommands: "npm test",
+      securityNotes: "Renderer must use IPC.",
+      doneDefinition: "Quality commands pass."
+    });
+
+    expect(listTasks(project.id)).toHaveLength(1);
+    expect(task.goal).toBe("Track AgentDesk work.");
+
+    const updated = updateTask({
+      id: task.id,
+      title: "Implement kanban board",
+      description: task.description,
+      status: "ready",
+      priority: "medium",
+      goal: task.goal,
+      context: task.context,
+      acceptanceCriteria: task.acceptanceCriteria,
+      filesLikelyAffected: task.filesLikelyAffected,
+      qualityCommands: task.qualityCommands,
+      securityNotes: task.securityNotes,
+      doneDefinition: task.doneDefinition
+    });
+
+    expect(updated.title).toBe("Implement kanban board");
+    expect(updated.status).toBe("ready");
+    expect(updated.priority).toBe("medium");
+
+    const moved = setTaskStatus({ id: task.id, status: "needs_review" });
+    expect(moved.status).toBe("needs_review");
+
+    deleteTask(task.id);
+    expect(listTasks(project.id)).toHaveLength(0);
   });
 });

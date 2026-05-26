@@ -19,6 +19,13 @@ import type {
   TerminalLogChunk,
   TerminalLogMeta
 } from "../shared/runLogTypes.js";
+import type {
+  TaskDeleteInput,
+  TaskInput,
+  TaskRecord,
+  TaskStatusUpdateInput,
+  TaskUpdateInput
+} from "../shared/taskTypes.js";
 
 type TerminalDataListener = (event: TerminalDataEvent) => void;
 type TerminalExitListener = (event: TerminalExitEvent) => void;
@@ -43,7 +50,7 @@ const subscribe = <T>(
 const agentdeskApi: AgentDeskApi = {
   app: {
     getName: (): string => "AgentDesk",
-    getPhase: (): string => "Project Workspace"
+    getPhase: (): string => "Task Board"
   },
   db: {
     getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>
@@ -55,6 +62,18 @@ const agentdeskApi: AgentDeskApi = {
       ipcRenderer.invoke("project:open-folder") as Promise<OpenProjectResult | null>,
     getOverview: (projectId: string): Promise<ProjectOverview> =>
       ipcRenderer.invoke("project:get-overview", { projectId }) as Promise<ProjectOverview>
+  },
+  tasks: {
+    list: (projectId: string): Promise<TaskRecord[]> =>
+      ipcRenderer.invoke("task:list", { projectId }) as Promise<TaskRecord[]>,
+    create: (input: TaskInput): Promise<TaskRecord> =>
+      ipcRenderer.invoke("task:create", input) as Promise<TaskRecord>,
+    update: (input: TaskUpdateInput): Promise<TaskRecord> =>
+      ipcRenderer.invoke("task:update", input) as Promise<TaskRecord>,
+    setStatus: (input: TaskStatusUpdateInput): Promise<TaskRecord> =>
+      ipcRenderer.invoke("task:set-status", input) as Promise<TaskRecord>,
+    delete: (input: TaskDeleteInput): Promise<void> =>
+      ipcRenderer.invoke("task:delete", input) as Promise<void>
   },
   runs: {
     getLogMeta: (request: RunLogRequest): Promise<TerminalLogMeta> =>
