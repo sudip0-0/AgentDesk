@@ -170,6 +170,7 @@ button {
 
 .terminal-panel {
   display: grid;
+  height: clamp(430px, calc(100vh - 300px), 720px);
   min-height: 430px;
   grid-template-rows: auto auto auto 1fr;
   gap: 10px;
@@ -283,7 +284,7 @@ button {
 }
 
 .terminal-frame {
-  min-height: 300px;
+  min-height: 0;
   overflow: hidden;
   padding: 8px;
   border: 1px solid #28313b;
@@ -293,6 +294,11 @@ button {
 
 .terminal-frame .xterm {
   height: 100%;
+}
+
+.terminal-frame .xterm-screen,
+.terminal-frame .xterm-viewport {
+  width: 100%;
 }
 
 .status-card {

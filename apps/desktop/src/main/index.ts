@@ -11,7 +11,7 @@ const createMainWindow = (): void => {
     show: false,
     title: "AgentDesk",
     webPreferences: {
-      preload: join(__dirname, "../preload/index.mjs"),
+      preload: join(__dirname, "../preload/index.cjs"),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true

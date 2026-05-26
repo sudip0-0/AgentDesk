@@ -15,12 +15,14 @@ export function TerminalPanel(): React.JSX.Element {
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const lastFrameSizeRef = useRef({ width: 0, height: 0 });
+  const resizeFrameRef = useRef<number | null>(null);
   const [cwd, setCwd] = useState("");
   const [sessionLabel, setSessionLabel] = useState("No active terminal");
   const [status, setStatus] = useState<TerminalStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const fitAndResize = useCallback(() => {
+  const fitAndResize = useCallback((force = false) => {
     const terminal = terminalRef.current;
     const fitAddon = fitAddonRef.current;
     const sessionId = sessionIdRef.current;
@@ -29,9 +31,20 @@ export function TerminalPanel(): React.JSX.Element {
       return;
     }
 
-    fitAddon.fit();
+    const dimensions = fitAddon.proposeDimensions();
 
-    if (sessionId) {
+    if (!dimensions) {
+      return;
+    }
+
+    const didTerminalSizeChange =
+      terminal.cols !== dimensions.cols || terminal.rows !== dimensions.rows;
+
+    if (didTerminalSizeChange) {
+      terminal.resize(dimensions.cols, dimensions.rows);
+    }
+
+    if (sessionId && (force || didTerminalSizeChange)) {
       window.agentdesk.terminals.resize({
         id: sessionId,
         cols: terminal.cols,
@@ -59,9 +72,11 @@ export function TerminalPanel(): React.JSX.Element {
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(containerRef.current);
+    terminalRef.current = terminal;
+    fitAddonRef.current = fitAddon;
     terminal.writeln("AgentDesk terminal ready.");
     terminal.writeln("Choose a working directory or leave it blank for your home folder.");
-    fitAddon.fit();
+    fitAndResize(true);
 
     const inputDisposable = terminal.onData((data) => {
       const sessionId = sessionIdRef.current;
@@ -71,19 +86,31 @@ export function TerminalPanel(): React.JSX.Element {
       }
     });
 
-    const resizeDisposable = terminal.onResize(({ cols, rows }) => {
-      const sessionId = sessionIdRef.current;
-
-      if (sessionId) {
-        window.agentdesk.terminals.resize({ id: sessionId, cols, rows });
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) {
+        return;
       }
-    });
 
-    terminalRef.current = terminal;
-    fitAddonRef.current = fitAddon;
+      const { width, height } = entry.contentRect;
+      const lastFrameSize = lastFrameSizeRef.current;
 
-    const resizeObserver = new ResizeObserver(() => {
-      fitAndResize();
+      if (
+        Math.round(width) === Math.round(lastFrameSize.width) &&
+        Math.round(height) === Math.round(lastFrameSize.height)
+      ) {
+        return;
+      }
+
+      lastFrameSizeRef.current = { width, height };
+
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+      }
+
+      resizeFrameRef.current = window.requestAnimationFrame(() => {
+        resizeFrameRef.current = null;
+        fitAndResize();
+      });
     });
     resizeObserver.observe(containerRef.current);
 
@@ -95,8 +122,10 @@ export function TerminalPanel(): React.JSX.Element {
       }
 
       resizeObserver.disconnect();
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+      }
       inputDisposable.dispose();
-      resizeDisposable.dispose();
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
@@ -105,32 +134,36 @@ export function TerminalPanel(): React.JSX.Element {
   }, [fitAndResize]);
 
   useEffect(() => {
-    const removeDataListener = window.agentdesk.terminals.onData(({ id, data }: TerminalDataEvent) => {
-      if (id === sessionIdRef.current) {
-        terminalRef.current?.write(data);
+    const removeDataListener = window.agentdesk.terminals.onData(
+      ({ id, data }: TerminalDataEvent) => {
+        if (id === sessionIdRef.current) {
+          terminalRef.current?.write(data);
+        }
       }
-    });
+    );
 
     const removeExitListener = window.agentdesk.terminals.onExit(
       ({ id, exitCode }: TerminalExitEvent) => {
-      if (id === sessionIdRef.current) {
-        terminalRef.current?.writeln("");
-        terminalRef.current?.writeln(`[process exited with code ${exitCode}]`);
-        sessionIdRef.current = null;
-        setStatus("exited");
-        setSessionLabel("No active terminal");
+        if (id === sessionIdRef.current) {
+          terminalRef.current?.writeln("");
+          terminalRef.current?.writeln(`[process exited with code ${exitCode}]`);
+          sessionIdRef.current = null;
+          setStatus("exited");
+          setSessionLabel("No active terminal");
+        }
       }
-    });
+    );
 
     const removeErrorListener = window.agentdesk.terminals.onError(
       ({ id, message }: TerminalErrorEvent) => {
-      if (id === sessionIdRef.current) {
-        terminalRef.current?.writeln("");
-        terminalRef.current?.writeln(`[terminal error] ${message}`);
-        setError(message);
-        setStatus("error");
+        if (id === sessionIdRef.current) {
+          terminalRef.current?.writeln("");
+          terminalRef.current?.writeln(`[terminal error] ${message}`);
+          setError(message);
+          setStatus("error");
+        }
       }
-    });
+    );
 
     return () => {
       removeDataListener();
