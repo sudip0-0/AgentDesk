@@ -12,6 +12,7 @@ import { DocumentsPanel } from "./components/DocumentsPanel";
 import { GitPanel } from "./components/GitPanel";
 import { QualityPanel } from "./components/QualityPanel";
 import { RunDetailPanel } from "./components/RunDetailPanel";
+import { SettingsPanel } from "./components/SettingsPanel";
 import type { DocumentPanelRequest } from "../../shared/documentTypes";
 import type { QualityRunContext } from "../../shared/qualityTypes";
 import type {
@@ -26,6 +27,8 @@ import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { Badge } from "./components/ui/Badge";
 import { Button } from "./components/ui/Button";
 import { Card, CardDescription, CardTitle } from "./components/ui/Card";
+import { EmptyState } from "./components/ui/EmptyState";
+import { StatusBadge } from "./components/ui/StatusBadge";
 import { Tabs } from "./components/ui/Tabs";
 import { cn } from "./lib/cn";
 
@@ -43,7 +46,6 @@ const navItems = [
 
 export function App(): React.JSX.Element {
   const appName = window.agentdesk.app.getName();
-  const phase = window.agentdesk.app.getPhase();
   const [activeNav, setActiveNav] = useState("projects");
   const [dbHealth, setDbHealth] = useState<DatabaseHealth | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -264,8 +266,8 @@ export function App(): React.JSX.Element {
   };
 
   return (
-    <div className="grid min-h-screen grid-cols-[248px_1fr] bg-bg">
-      <aside className="flex flex-col gap-7 border-r border-border bg-[#121820] p-5">
+    <div className="grid min-h-screen grid-cols-[200px_1fr] bg-bg xl:grid-cols-[248px_1fr]">
+      <aside className="flex flex-col gap-7 border-r border-border bg-[#121820] p-4 xl:p-5">
         <div className="flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-lg border border-border bg-accent font-extrabold text-[#0e151a]">
             AD
@@ -281,30 +283,28 @@ export function App(): React.JSX.Element {
 
       <div className="grid min-w-0 grid-rows-[auto_1fr]">
         <header className="flex items-center justify-between gap-4 border-b border-border bg-[#151b22] px-6 py-4">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wide text-accent">Phase 10</span>
-            <h1 className="mt-1 text-xl font-bold text-text">{phase}</h1>
+          <div className="min-w-0">
+            <span className="text-xs font-bold uppercase tracking-wide text-accent">Workspace</span>
+            <h1 className="mt-1 truncate text-xl font-bold text-text">
+              {activeProject ? activeProject.name : "No workspace open"}
+            </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {activeProject?.metadata.isGitRepo && activeProject.metadata.currentBranch ? (
+              <Badge>{activeProject.metadata.currentBranch}</Badge>
+            ) : null}
             {dbHealth ? (
               <Badge variant={dbHealth.ok ? "success" : "danger"}>
                 {dbHealth.ok ? "SQLite ready" : "SQLite error"}
               </Badge>
             ) : null}
-            <Badge variant="success">PTY terminal ready</Badge>
-            {activeProject ? <Badge>{activeProject.name}</Badge> : null}
+            <Button onClick={() => setPaletteOpen(true)} size="sm" variant="secondary">
+              Search ⌘K
+            </Button>
           </div>
         </header>
 
         <main className="grid content-start gap-4 p-6">
-          <Card>
-            <CardTitle>Project Workspace</CardTitle>
-            <CardDescription>
-              Open a local folder, detect project metadata in the main process, and keep terminal
-              operations scoped to the selected project.
-            </CardDescription>
-          </Card>
-
           {activeNav === "projects" ? (
             <section className="grid gap-4">
               <DemoFlowPanel
@@ -345,10 +345,19 @@ export function App(): React.JSX.Element {
                 ) : null}
 
                 {projects.length === 0 ? (
-                  <Card className="border-dashed">
-                    <CardTitle>No project open</CardTitle>
-                    <CardDescription>Select a local folder to start workspace detection.</CardDescription>
-                  </Card>
+                  <EmptyState
+                    action={
+                      <Button
+                        disabled={isOpeningProject}
+                        onClick={() => void openProjectFolder()}
+                        variant="primary"
+                      >
+                        Open Workspace
+                      </Button>
+                    }
+                    description="Open a project folder to start orchestrating agents."
+                    title="No workspace selected"
+                  />
                 ) : null}
 
                 {projects.map((project) => (
@@ -454,55 +463,7 @@ export function App(): React.JSX.Element {
             <RunDetailPanel initialRunId={selectedRunId} project={activeProject} />
           ) : null}
 
-          <section className="grid gap-3 md:grid-cols-3">
-            <Card>
-              <Badge className="mb-2">Main</Badge>
-              <CardTitle>PTY sessions</CardTitle>
-              <CardDescription>Creates, tracks, resizes, kills terminals, and persists logs.</CardDescription>
-            </Card>
-            <Card>
-              <Badge className="mb-2" variant="warning">
-                Database
-              </Badge>
-              <CardTitle>SQLite storage</CardTitle>
-              <CardDescription>
-                {dbHealth?.message ?? "Checking local database..."}
-              </CardDescription>
-            </Card>
-            <Card>
-              <Badge className="mb-2">Renderer</Badge>
-              <CardTitle>xterm.js + Tailwind UI</CardTitle>
-              <CardDescription>
-                Displays live output, paginated transcripts, and reusable UI primitives.
-              </CardDescription>
-            </Card>
-          </section>
-
-          {activeNav === "settings" ? (
-            <Card>
-              <CardTitle>Settings</CardTitle>
-              <CardDescription>
-                Keyboard shortcuts: Ctrl+Shift+P palette, Ctrl+Shift+N create task, Ctrl+Shift+L launch
-                agent, Ctrl+Shift+Q run checks, Ctrl+Shift+` terminal, Ctrl+Tab switch terminal tabs,
-                Ctrl+1-9 switch sidebar screens.
-              </CardDescription>
-            </Card>
-          ) : null}
-
-          {activeNav !== "terminal" &&
-          activeNav !== "projects" &&
-          activeNav !== "tasks" &&
-          activeNav !== "agents" &&
-          activeNav !== "quality" &&
-          activeNav !== "git" &&
-          activeNav !== "documents" &&
-          activeNav !== "runs" &&
-          activeNav !== "settings" ? (
-            <Card className={cn("border-dashed")}>
-              <CardTitle>{navItems.find((item) => item.id === activeNav)?.label}</CardTitle>
-              <CardDescription>This screen is planned for a later phase.</CardDescription>
-            </Card>
-          ) : null}
+          {activeNav === "settings" ? <SettingsPanel /> : null}
         </main>
       </div>
 
@@ -612,7 +573,7 @@ function ProjectOverviewPanel({
                     <span className="text-sm font-bold text-text">
                       {run.taskTitle ?? run.command}
                     </span>
-                    <Badge variant={run.status === "completed" ? "success" : "default"}>{run.status}</Badge>
+                    <StatusBadge status={run.status} />
                   </div>
                   {run.taskTitle ? (
                     <span className="text-xs text-muted">{run.command}</span>

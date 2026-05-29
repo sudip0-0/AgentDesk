@@ -23,7 +23,7 @@ export function Tabs({ items, activeId, onChange, className }: TabsProps): React
           <button
             aria-selected={isActive}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-bold transition",
+              "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-bold transition outline-none focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-1 focus-visible:ring-offset-bg",
               isActive
                 ? "border-accent/50 bg-panel-strong text-text"
                 : "border-border bg-[#10161d] text-muted hover:text-text"

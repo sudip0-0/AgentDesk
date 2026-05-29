@@ -3,6 +3,7 @@ import { INITIAL_MIGRATION_SQL } from "./migrations/0001_initial.js";
 import { TASK_CONTRACT_FIELDS_MIGRATION_SQL } from "./migrations/0002_task_contract_fields.js";
 import { AGENT_PROFILE_LAUNCH_FIELDS_MIGRATION_SQL } from "./migrations/0003_agent_profile_launch_fields.js";
 import { QUALITY_COMMANDS_MIGRATION_SQL } from "./migrations/0004_quality_commands.js";
+import { REVIEWS_AND_SETTINGS_MIGRATION_SQL } from "./migrations/0005_reviews_and_settings.js";
 
 const migrations = [
   {
@@ -20,8 +21,14 @@ const migrations = [
   {
     id: "0004_quality_commands",
     sql: QUALITY_COMMANDS_MIGRATION_SQL
+  },
+  {
+    id: "0005_reviews_and_settings",
+    sql: REVIEWS_AND_SETTINGS_MIGRATION_SQL
   }
 ];
+
+export const MIGRATION_COUNT = migrations.length;
 
 export const runMigrations = (database: SqliteDatabase): void => {
   database.exec(`

@@ -11,6 +11,7 @@ import { registerTaskIpc } from "./tasks/taskIpc.js";
 import { registerTerminalIpc, terminalSessionManager } from "./terminal/terminalIpc.js";
 import { registerGitIpc } from "./git/gitIpc.js";
 import { registerDocumentIpc } from "./documents/documentIpc.js";
+import { registerSettingsIpc } from "./settings/settingsIpc.js";
 
 let isQuitting = false;
 
@@ -110,6 +111,7 @@ app.whenReady().then(() => {
   registerTaskIpc();
   registerRunLogIpc();
   registerRunDetailIpc();
+  registerSettingsIpc();
   registerTerminalIpc();
   createMainWindow();
 

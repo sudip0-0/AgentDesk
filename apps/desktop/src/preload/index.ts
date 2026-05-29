@@ -42,6 +42,8 @@ import type {
   AgentRunDetailRequest,
   AgentRunListItem
 } from "../shared/runDetailTypes.js";
+import type { ListReviewsInput, ReviewRecord, SaveReviewInput } from "../shared/reviewTypes.js";
+import type { AppSettings, AppSettingsUpdate } from "../shared/settingsTypes.js";
 import type {
   GitCommitInput,
   GitCommitResult,
@@ -138,7 +140,11 @@ const agentdeskApi: AgentDeskApi = {
     listLogChunks: (request: ListTerminalLogChunksRequest): Promise<TerminalLogChunk[]> =>
       ipcRenderer.invoke("runs:log-chunks", request) as Promise<TerminalLogChunk[]>,
     exportLog: (request: RunLogRequest): Promise<ExportTerminalLogResult> =>
-      ipcRenderer.invoke("runs:export-log", request) as Promise<ExportTerminalLogResult>
+      ipcRenderer.invoke("runs:export-log", request) as Promise<ExportTerminalLogResult>,
+    saveReview: (request: SaveReviewInput): Promise<ReviewRecord> =>
+      ipcRenderer.invoke("runs:save-review", request) as Promise<ReviewRecord>,
+    listReviews: (request: ListReviewsInput): Promise<ReviewRecord[]> =>
+      ipcRenderer.invoke("runs:list-reviews", request) as Promise<ReviewRecord[]>
   },
   quality: {
     listCommands: (projectId: string): Promise<QualityCommandRecord[]> =>
@@ -195,6 +201,11 @@ const agentdeskApi: AgentDeskApi = {
       subscribe<TerminalErrorEvent>("terminal:error", listener),
     onActivity: (listener: TerminalActivityListener): Unsubscribe =>
       subscribe<TerminalActivityEvent>("terminal:activity", listener)
+  },
+  settings: {
+    get: (): Promise<AppSettings> => ipcRenderer.invoke("settings:get") as Promise<AppSettings>,
+    update: (input: AppSettingsUpdate): Promise<AppSettings> =>
+      ipcRenderer.invoke("settings:update", input) as Promise<AppSettings>
   }
 };
 

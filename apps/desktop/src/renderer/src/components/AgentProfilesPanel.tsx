@@ -11,6 +11,7 @@ import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { Dialog } from "./ui/Dialog";
 import { Input } from "./ui/Input";
+import { StatusBadge } from "./ui/StatusBadge";
 import { cn } from "../lib/cn";
 
 const emptyProfile: AgentProfileInput = {
@@ -227,9 +228,7 @@ export function AgentProfilesPanel(): React.JSX.Element {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="block text-sm font-bold text-text">{profile.name}</span>
-                <Badge variant={status ? (status.installed ? "success" : "danger") : "default"}>
-                  {status ? (status.installed ? "Installed" : "Missing") : "Unknown"}
-                </Badge>
+                <StatusBadge status={status ? (status.installed ? "installed" : "missing") : "unknown"} />
               </div>
               <span className="mt-1 block truncate text-xs text-muted">{profile.command}</span>
             </button>
@@ -311,9 +310,7 @@ function AgentProfileDetail({
           </div>
           <div className="flex items-center gap-2">
             {availability ? (
-              <Badge variant={availability.installed ? "success" : "danger"}>
-                {availability.installed ? "Installed" : "Missing"}
-              </Badge>
+              <StatusBadge status={availability.installed ? "installed" : "missing"} />
             ) : null}
             <Badge>{modeLabels[profile.mode]}</Badge>
           </div>

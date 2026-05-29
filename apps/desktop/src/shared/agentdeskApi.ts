@@ -29,6 +29,8 @@ import type {
   AgentRunDetailRequest,
   AgentRunListItem
 } from "./runDetailTypes.js";
+import type { ListReviewsInput, ReviewRecord, SaveReviewInput } from "./reviewTypes.js";
+import type { AppSettings, AppSettingsUpdate } from "./settingsTypes.js";
 import type {
   GitCommitInput,
   GitCommitResult,
@@ -99,6 +101,8 @@ export interface AgentDeskApi {
     getLogMeta: (request: RunLogRequest) => Promise<TerminalLogMeta>;
     listLogChunks: (request: ListTerminalLogChunksRequest) => Promise<TerminalLogChunk[]>;
     exportLog: (request: RunLogRequest) => Promise<ExportTerminalLogResult>;
+    saveReview: (request: SaveReviewInput) => Promise<ReviewRecord>;
+    listReviews: (request: ListReviewsInput) => Promise<ReviewRecord[]>;
   };
   quality: {
     listCommands: (projectId: string) => Promise<QualityCommandRecord[]>;
@@ -130,5 +134,9 @@ export interface AgentDeskApi {
     onExit: (listener: (event: TerminalExitEvent) => void) => Unsubscribe;
     onError: (listener: (event: TerminalErrorEvent) => void) => Unsubscribe;
     onActivity: (listener: (event: TerminalActivityEvent) => void) => Unsubscribe;
+  };
+  settings: {
+    get: () => Promise<AppSettings>;
+    update: (input: AppSettingsUpdate) => Promise<AppSettings>;
   };
 }

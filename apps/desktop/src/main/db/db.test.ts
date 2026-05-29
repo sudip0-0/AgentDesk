@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase } from "./client.js";
 import { checkDatabaseHealth } from "./health.js";
-import { runMigrations } from "./migrate.js";
+import { runMigrations, MIGRATION_COUNT } from "./migrate.js";
 import { setDatabasePathForTests } from "./paths.js";
 import { ensureDefaultData, ensureDefaultProject } from "./seed.js";
 import { openProjectFromPath } from "./repositories/projectRepository.js";
@@ -61,7 +61,7 @@ describe("database", () => {
     runMigrations(sqlite);
 
     const rows = sqlite.prepare("SELECT id FROM schema_migrations").all() as { id: string }[];
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(MIGRATION_COUNT);
     sqlite.close();
   });
 

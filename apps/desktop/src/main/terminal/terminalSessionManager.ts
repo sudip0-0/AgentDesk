@@ -2,9 +2,11 @@ import type { WebContents } from "electron";
 import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
 import { buildAgentLaunchConfig } from "../../shared/agentCommandBuilder.js";
+import { classifyCommand, describeCommandRisk } from "../../shared/commandSafety.js";
 import { writePromptToTerminal } from "../../shared/promptDelivery.js";
 import type { AgentRunStatus } from "../db/repositories/agentRunRepository.js";
 import { getAgentProfileById } from "../db/repositories/agentProfileRepository.js";
+import { getAppSettings } from "../db/repositories/settingsRepository.js";
 import { getProjectById } from "../db/repositories/projectRepository.js";
 import {
   assertTaskBelongsToProject,
@@ -21,6 +23,7 @@ import {
   detectWaitingForInput,
   type TerminalActivityState
 } from "../../shared/terminalActivity.js";
+import { isSessionIdle } from "../../shared/terminalIdle.js";
 import type {
   CreateTerminalRequest,
   CreateTerminalResult,
@@ -41,7 +44,9 @@ interface TerminalSession {
   ownerWebContentsId: number;
   activityState: TerminalActivityState;
   outputTail: string;
+  lastOutputAt: number;
   closingStatus?: AgentRunStatus;
+  webContents: WebContents;
   pty: IPty;
 }
 
@@ -53,12 +58,16 @@ const resolveProjectFromDatabase: ProjectResolver = (projectId) =>
 const resolveTaskStatusAfterExit = (exitCode: number): TaskStatus =>
   exitCode === 0 ? "needs_review" : "failed";
 
+const IDLE_CHECK_INTERVAL_MS = 5_000;
+
 export class TerminalSessionManager {
   private readonly sessions = new Map<string, TerminalSession>();
+  private idleTimer: NodeJS.Timeout | null = null;
 
   public constructor(
     private readonly logWriter: TerminalLogWriter,
-    private readonly resolveProject: ProjectResolver = resolveProjectFromDatabase
+    private readonly resolveProject: ProjectResolver = resolveProjectFromDatabase,
+    private readonly getIdleThresholdMs: () => number = () => getAppSettings().idleWarningSeconds * 1_000
   ) {}
 
   public hasActiveSessions(): boolean {
@@ -125,6 +134,21 @@ export class TerminalSessionManager {
       profile && linkedTask && prompt
         ? buildAgentLaunchConfig(profile, { project, task: linkedTask, prompt, cwd })
         : null;
+
+    if (command) {
+      const risk = classifyCommand(command.displayCommand);
+
+      if (risk.level === "block" && getAppSettings().blockDestructiveCommands) {
+        if (linkedTask) {
+          setTaskStatus({ projectId: project.id, id: linkedTask.id, status: "ready" });
+        }
+
+        throw new Error(
+          `AgentDesk blocked this agent launch for safety. ${describeCommandRisk(risk)} Adjust the agent profile command or disable command blocking in Settings.`
+        );
+      }
+    }
+
     const executable = command?.spawnExecutable ?? panelShell;
     const args = command?.spawnArgs ?? [];
     const displayCommand = command?.displayCommand ?? panelShell;
@@ -181,8 +205,11 @@ export class TerminalSessionManager {
       ownerWebContentsId: webContents.id,
       activityState: "busy",
       outputTail: "",
+      lastOutputAt: Date.now(),
+      webContents,
       pty
     });
+    this.ensureIdleWatchdog();
 
     if (command?.promptWillBeSentToStdin && prompt) {
       setTimeout(() => {
@@ -206,6 +233,7 @@ export class TerminalSessionManager {
 
       if (session) {
         session.outputTail = appendOutputTail(session.outputTail, redacted);
+        session.lastOutputAt = Date.now();
         this.updateActivityState(session, webContents);
       }
 
@@ -226,6 +254,7 @@ export class TerminalSessionManager {
       this.logWriter.endSession(id, agentRunId, status, exitCode);
       this.syncTaskStatusAfterExit(session, exitCode);
       this.sessions.delete(id);
+      this.stopIdleWatchdogIfEmpty();
 
       if (!webContents.isDestroyed()) {
         const event: TerminalExitEvent = { id, exitCode, signal };
@@ -239,6 +268,7 @@ export class TerminalSessionManager {
   public write(request: TerminalWriteRequest, webContents: WebContents): void {
     const session = this.getOwnedSession(request.id, webContents.id);
     session.pty.write(request.data);
+    session.lastOutputAt = Date.now();
     this.setActivityState(session, "busy", webContents);
   }
 
@@ -267,6 +297,42 @@ export class TerminalSessionManager {
     for (const session of this.sessions.values()) {
       session.closingStatus = "killed";
       session.pty.kill();
+    }
+  }
+
+  private ensureIdleWatchdog(): void {
+    if (this.idleTimer) {
+      return;
+    }
+
+    this.idleTimer = setInterval(() => {
+      this.checkIdleSessions();
+    }, IDLE_CHECK_INTERVAL_MS);
+
+    // Do not keep the process alive solely for the idle watchdog.
+    this.idleTimer.unref?.();
+  }
+
+  private stopIdleWatchdogIfEmpty(): void {
+    if (this.sessions.size === 0 && this.idleTimer) {
+      clearInterval(this.idleTimer);
+      this.idleTimer = null;
+    }
+  }
+
+  private checkIdleSessions(): void {
+    const now = Date.now();
+    const idleThresholdMs = this.getIdleThresholdMs();
+
+    for (const session of this.sessions.values()) {
+      // Only escalate busy sessions; do not override a detected input prompt.
+      if (session.activityState !== "busy") {
+        continue;
+      }
+
+      if (isSessionIdle({ lastOutputAt: session.lastOutputAt, now, idleThresholdMs })) {
+        this.setActivityState(session, "idle", session.webContents);
+      }
     }
   }
 

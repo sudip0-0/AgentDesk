@@ -69,6 +69,10 @@ const formatRunningLabel = (
     return "Waiting for input";
   }
 
+  if (activity === "idle") {
+    return "Idle — no recent output";
+  }
+
   return tab.baseLabel;
 };
 
@@ -657,7 +661,7 @@ export function TerminalPanel({
     status: TerminalStatus,
     activity: TerminalActivityState
   ): "default" | "success" | "warning" | "danger" => {
-    if (status === "running" && activity === "waiting_for_input") {
+    if (status === "running" && (activity === "waiting_for_input" || activity === "idle")) {
       return "warning";
     }
 
@@ -679,6 +683,10 @@ export function TerminalPanel({
   const statusLabel = (tab: TerminalTab): string => {
     if (tab.status === "running" && tab.activity === "waiting_for_input") {
       return "waiting for input";
+    }
+
+    if (tab.status === "running" && tab.activity === "idle") {
+      return "idle";
     }
 
     return tab.status;
@@ -711,7 +719,11 @@ export function TerminalPanel({
                 <span
                   className={cn(
                     "size-1.5 rounded-full",
-                    tab.activity === "waiting_for_input" ? "bg-[#f0c674]" : "bg-accent"
+                    tab.activity === "waiting_for_input"
+                      ? "bg-[#f0c674]"
+                      : tab.activity === "idle"
+                        ? "bg-[#d6915e]"
+                        : "bg-accent"
                   )}
                   aria-hidden
                 />

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type {
   QualityCheckRecord,
-  QualityCheckStatus,
   QualityCommandInput,
   QualityCommandRecord,
   QualityRunContext
@@ -13,20 +12,10 @@ import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { Dialog } from "./ui/Dialog";
+import { EmptyState } from "./ui/EmptyState";
 import { Input } from "./ui/Input";
+import { StatusBadge } from "./ui/StatusBadge";
 import { cn } from "../lib/cn";
-
-const statusVariant = (status: QualityCheckStatus): "success" | "danger" | "warning" => {
-  if (status === "passed") {
-    return "success";
-  }
-
-  if (status === "skipped") {
-    return "warning";
-  }
-
-  return "danger";
-};
 
 const emptyCommand = (projectId: string): QualityCommandInput => ({
   projectId,
@@ -254,10 +243,10 @@ export function QualityPanel({
 
   if (!project) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>No project selected</CardTitle>
-        <CardDescription>Open a project before configuring quality checks.</CardDescription>
-      </Card>
+      <EmptyState
+        description="Open a project before configuring quality checks."
+        title="No project selected"
+      />
     );
   }
 
@@ -356,10 +345,10 @@ export function QualityPanel({
         <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Recent Results</h2>
 
         {checks.length === 0 ? (
-          <Card className="border-dashed">
-            <CardTitle>No quality results</CardTitle>
-            <CardDescription>Run checks to capture stdout, stderr, exit code, and timing.</CardDescription>
-          </Card>
+          <EmptyState
+            description="Run checks to capture stdout, stderr, exit code, and timing."
+            title="No quality results"
+          />
         ) : null}
 
         <div className="grid gap-3 xl:grid-cols-[minmax(260px,360px)_1fr]">
@@ -376,7 +365,7 @@ export function QualityPanel({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-bold text-text">{check.label}</span>
-                  <Badge variant={statusVariant(check.status)}>{check.status}</Badge>
+                  <StatusBadge status={check.status} />
                 </div>
                 <span className="mt-1 block truncate text-xs text-muted">{check.command}</span>
               </button>
@@ -471,10 +460,7 @@ function QualityResultDetail({
 }): React.JSX.Element {
   if (!check) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>Result Detail</CardTitle>
-        <CardDescription>Select a quality result.</CardDescription>
-      </Card>
+      <EmptyState description="Select a quality result." title="Result Detail" />
     );
   }
 
@@ -485,7 +471,7 @@ function QualityResultDetail({
           <CardTitle>{check.label}</CardTitle>
           <CardDescription className="break-all">{check.command}</CardDescription>
         </div>
-        <Badge variant={statusVariant(check.status)}>{check.status}</Badge>
+        <StatusBadge status={check.status} />
       </div>
 
       <div className="mt-3 grid gap-2 text-xs text-muted">

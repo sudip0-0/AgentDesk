@@ -486,6 +486,45 @@ CREATE TABLE quality_checks (
 );
 ```
 
+### reviews
+
+Persisted review results derived from a run's quality checks, changed files, and
+process outcome (migration `0005_reviews_and_settings`).
+
+```sql
+CREATE TABLE reviews (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  run_id TEXT NOT NULL,
+  task_id TEXT,
+  status TEXT NOT NULL,            -- passed | warning | failed
+  risks TEXT NOT NULL,             -- JSON array
+  recommendations TEXT NOT NULL,   -- JSON array
+  changed_file_count INTEGER NOT NULL,
+  quality_passed INTEGER NOT NULL,
+  quality_failed INTEGER NOT NULL,
+  quality_skipped INTEGER NOT NULL,
+  quality_blocked INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id),
+  FOREIGN KEY(run_id) REFERENCES agent_runs(id),
+  FOREIGN KEY(task_id) REFERENCES tasks(id)
+);
+```
+
+### app_settings
+
+Global key/value settings (single `app` row holding a JSON blob, merged over
+typed defaults).
+
+```sql
+CREATE TABLE app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
 ## IPC API Design
 
 Expose narrow APIs.
@@ -512,9 +551,19 @@ terminal:on-output
 agent:list-profiles
 agent:create-profile
 agent:launch
+agent-profile:availability
+agent-profile:test
 
 quality:run
 quality:list
+
+runs:list
+runs:get-detail
+runs:save-review
+runs:list-reviews
+
+settings:get
+settings:update
 
 git:status
 git:diff

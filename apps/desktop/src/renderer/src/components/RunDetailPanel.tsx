@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AgentRunDetail, AgentRunListItem } from "../../../shared/runDetailTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
+import type { ReviewRecord } from "../../../shared/reviewTypes";
 import { buildReviewSummary, type ReviewStatus } from "../../../shared/reviewSummary";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
+import { EmptyState } from "./ui/EmptyState";
+import { StatusBadge } from "./ui/StatusBadge";
 import { cn } from "../lib/cn";
 
 const formatDuration = (durationMs: number | null): string => {
@@ -17,34 +20,6 @@ const formatDuration = (durationMs: number | null): string => {
   const remainder = seconds % 60;
 
   return minutes > 0 ? `${minutes}m ${remainder}s` : `${remainder}s`;
-};
-
-const statusVariant = (status: string): "default" | "success" | "warning" | "danger" => {
-  if (status === "completed") {
-    return "success";
-  }
-
-  if (status === "running") {
-    return "warning";
-  }
-
-  if (status === "failed" || status === "killed") {
-    return "danger";
-  }
-
-  return "default";
-};
-
-const qualityStatusVariant = (status: string): "default" | "success" | "warning" | "danger" => {
-  if (status === "passed") {
-    return "success";
-  }
-
-  if (status === "skipped") {
-    return "warning";
-  }
-
-  return "danger";
 };
 
 const reviewStatusVariant = (status: ReviewStatus): "success" | "warning" | "danger" => {
@@ -69,6 +44,9 @@ export function RunDetailPanel({
   const [runs, setRuns] = useState<AgentRunListItem[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [detail, setDetail] = useState<AgentRunDetail | null>(null);
+  const [reviews, setReviews] = useState<ReviewRecord[]>([]);
+  const [isSavingReview, setIsSavingReview] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,10 +91,12 @@ export function RunDetailPanel({
   useEffect(() => {
     if (!project || !selectedRunId) {
       setDetail(null);
+      setReviews([]);
       return;
     }
 
     let cancelled = false;
+    setReviewMessage(null);
 
     void window.agentdesk.runs
       .getDetail({ projectId: project.id, runId: selectedRunId })
@@ -133,17 +113,55 @@ export function RunDetailPanel({
         }
       });
 
+    void window.agentdesk.runs
+      .listReviews({ projectId: project.id, runId: selectedRunId })
+      .then((loaded: ReviewRecord[]) => {
+        if (!cancelled) {
+          setReviews(loaded);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReviews([]);
+        }
+      });
+
     return () => {
       cancelled = true;
     };
   }, [project, selectedRunId]);
 
+  const saveReview = useCallback(async (): Promise<void> => {
+    if (!project || !selectedRunId) {
+      return;
+    }
+
+    setIsSavingReview(true);
+    setReviewMessage(null);
+
+    try {
+      await window.agentdesk.runs.saveReview({ projectId: project.id, runId: selectedRunId });
+      const loaded = await window.agentdesk.runs.listReviews({
+        projectId: project.id,
+        runId: selectedRunId
+      });
+      setReviews(loaded);
+      setReviewMessage("Review saved to history.");
+    } catch (saveError) {
+      setReviewMessage(
+        saveError instanceof Error ? saveError.message : "Failed to save review."
+      );
+    } finally {
+      setIsSavingReview(false);
+    }
+  }, [project, selectedRunId]);
+
   if (!project) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>No project selected</CardTitle>
-        <CardDescription>Open a project before reviewing runs.</CardDescription>
-      </Card>
+      <EmptyState
+        description="Open a project before reviewing runs."
+        title="No project selected"
+      />
     );
   }
 
@@ -166,11 +184,15 @@ export function RunDetailPanel({
           </div>
         ) : null}
 
-        {runs.length === 0 ? (
-          <Card className="border-dashed">
-            <CardTitle>No runs recorded</CardTitle>
-            <CardDescription>Launch an agent from a task to create a run report.</CardDescription>
-          </Card>
+        {isLoading && runs.length === 0 ? (
+          <EmptyState description="Loading runs..." title="Loading" />
+        ) : null}
+
+        {!isLoading && runs.length === 0 ? (
+          <EmptyState
+            description="Launch an agent from a task to create a run report."
+            title="No runs recorded"
+          />
         ) : null}
 
         <div className="grid gap-2">
@@ -188,7 +210,7 @@ export function RunDetailPanel({
                 <span className="truncate text-sm font-bold text-text">
                   {run.taskTitle ?? run.agentName ?? run.command}
                 </span>
-                <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
+                <StatusBadge status={run.status} />
               </div>
               <span className="truncate text-xs text-muted">{run.command}</span>
               <span className="text-xs text-muted">
@@ -199,12 +221,30 @@ export function RunDetailPanel({
         </div>
       </div>
 
-      <RunDetail detail={detail} />
+      <RunDetail
+        detail={detail}
+        isSavingReview={isSavingReview}
+        onSaveReview={() => void saveReview()}
+        reviewMessage={reviewMessage}
+        reviews={reviews}
+      />
     </section>
   );
 }
 
-function ReviewSummaryCard({ detail }: { detail: AgentRunDetail }): React.JSX.Element {
+function ReviewSummaryCard({
+  detail,
+  reviews,
+  isSavingReview,
+  reviewMessage,
+  onSaveReview
+}: {
+  detail: AgentRunDetail;
+  reviews: ReviewRecord[];
+  isSavingReview: boolean;
+  reviewMessage: string | null;
+  onSaveReview: () => void;
+}): React.JSX.Element {
   const summary = buildReviewSummary({
     runStatus: detail.status,
     exitCode: detail.exitCode,
@@ -216,7 +256,12 @@ function ReviewSummaryCard({ detail }: { detail: AgentRunDetail }): React.JSX.El
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <CardTitle>Review Summary</CardTitle>
-        <Badge variant={reviewStatusVariant(summary.status)}>{summary.status}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={reviewStatusVariant(summary.status)}>{summary.status}</Badge>
+          <Button disabled={isSavingReview} onClick={onSaveReview} size="sm" variant="secondary">
+            {isSavingReview ? "Saving..." : "Save Review"}
+          </Button>
+        </div>
       </div>
       <CardDescription>
         {summary.changedFileCount} changed file(s) · {summary.qualityCounts.passed} passed ·{" "}
@@ -250,17 +295,54 @@ function ReviewSummaryCard({ detail }: { detail: AgentRunDetail }): React.JSX.El
           </ul>
         </div>
       </div>
+
+      {reviewMessage ? (
+        <div className="mt-3 rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs text-[#bfe9e3]">
+          {reviewMessage}
+        </div>
+      ) : null}
+
+      {reviews.length > 0 ? (
+        <div className="mt-3 border-t border-border pt-3">
+          <span className="text-xs font-bold uppercase tracking-wide text-muted">
+            Saved Reviews ({reviews.length})
+          </span>
+          <ul className="mt-2 grid gap-1.5">
+            {reviews.map((review) => (
+              <li
+                className="flex items-center justify-between gap-2 rounded-md border border-border bg-[#10161d] px-2.5 py-1.5"
+                key={review.id}
+              >
+                <span className="text-xs text-muted">{review.createdAt}</span>
+                <Badge variant={reviewStatusVariant(review.status)}>{review.status}</Badge>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </Card>
   );
 }
 
-function RunDetail({ detail }: { detail: AgentRunDetail | null }): React.JSX.Element {
+function RunDetail({
+  detail,
+  reviews,
+  isSavingReview,
+  reviewMessage,
+  onSaveReview
+}: {
+  detail: AgentRunDetail | null;
+  reviews: ReviewRecord[];
+  isSavingReview: boolean;
+  reviewMessage: string | null;
+  onSaveReview: () => void;
+}): React.JSX.Element {
   if (!detail) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>Run Detail</CardTitle>
-        <CardDescription>Select a run to review command, prompt, transcript, diff, and checks.</CardDescription>
-      </Card>
+      <EmptyState
+        description="Select a run to review command, prompt, transcript, diff, and checks."
+        title="Run Detail"
+      />
     );
   }
 
@@ -272,7 +354,7 @@ function RunDetail({ detail }: { detail: AgentRunDetail | null }): React.JSX.Ele
             <CardTitle>{detail.task?.title ?? detail.agent?.name ?? "Agent Run"}</CardTitle>
             <CardDescription className="break-all">{detail.command}</CardDescription>
           </div>
-          <Badge variant={statusVariant(detail.status)}>{detail.status}</Badge>
+          <StatusBadge status={detail.status} />
         </div>
         {detail.errorMessage ? (
           <div className="mt-3 rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
@@ -291,7 +373,13 @@ function RunDetail({ detail }: { detail: AgentRunDetail | null }): React.JSX.Ele
         </div>
       </Card>
 
-      <ReviewSummaryCard detail={detail} />
+      <ReviewSummaryCard
+        detail={detail}
+        isSavingReview={isSavingReview}
+        onSaveReview={onSaveReview}
+        reviewMessage={reviewMessage}
+        reviews={reviews}
+      />
 
       <Card>
         <CardTitle>Prompt</CardTitle>
@@ -338,7 +426,7 @@ function RunDetail({ detail }: { detail: AgentRunDetail | null }): React.JSX.Ele
                 <div className="rounded-md border border-border bg-[#10161d] px-3 py-2" key={check.id}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-bold text-text">{check.label}</span>
-                    <Badge variant={qualityStatusVariant(check.status)}>{check.status}</Badge>
+                    <StatusBadge status={check.status} />
                   </div>
                   <span className="mt-1 block truncate text-xs text-muted">{check.command}</span>
                 </div>

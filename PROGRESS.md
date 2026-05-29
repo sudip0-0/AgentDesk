@@ -144,25 +144,39 @@ None.
 - Added a command safety layer (`shared/commandSafety.ts`) that blocks clearly
   destructive quality commands before execution and warns on risky ones in the
   Quality screen. Added a `blocked` quality-check status.
+- Extended command safety to agent launches: the terminal session manager
+  classifies the resolved agent command and blocks destructive launches (gated by
+  the `blockDestructiveCommands` setting) before any process spawns.
 - Added agent availability detection: the Agents screen shows Installed/Missing
   status per profile (`shared/agentAvailability.ts` + main-process probe) and a
   "Test Command" button that runs a `--version` probe with redacted output.
 - Reliability: interrupted runs left in `running` after a crash/force-quit are
   reconciled to `failed` on startup (`reconcileInterruptedRuns`), and their
-  linked still-running tasks are reset to `ready`, so the UI never shows a
-  permanently stuck run.
-- Reliability: spawn failures now persist a run `errorMessage`, surfaced
-  prominently on the run detail screen instead of only being thrown to the
-  caller.
+  linked still-running tasks are reset to `ready`.
+- Reliability: spawn failures persist a run `errorMessage`, surfaced on the run
+  detail screen.
 - Reliability: the quality runner validates the project folder still exists and
-  is a directory before spawning, returning a clear error if the workspace was
-  moved or deleted.
-- Review engine: added `shared/reviewSummary.ts`, a pure derived view that turns
-  a run's quality results, changed files, and process outcome into a single
-  pass/fail/warning verdict with risks and recommended next actions, surfaced in
-  a Review Summary card on the run detail screen.
+  is a directory before spawning.
+- Review engine: added `shared/reviewSummary.ts`, a pure pass/fail/warning
+  verdict with risks and recommendations, shown on the run detail screen.
+- Persisted reviews: a `reviews` table (migration 0005) stores review results
+  linked to run and task; the run detail screen can "Save Review" and shows
+  saved review history.
+- Settings: added an `app_settings` table, settings IPC, and an editable
+  Settings screen (block destructive commands, require launch approval, confirm
+  destructive git, idle warning threshold).
+- Process watchdog: running terminal sessions with no output for longer than the
+  configured idle threshold are flagged `idle` in the terminal UI
+  (`shared/terminalIdle.ts` + session manager timer).
+- UI/UX pass: added reusable `StatusBadge` (single source of truth for status
+  colors/labels), `EmptyState`, and `PageHeader` components; adopted them across
+  the run, quality, task, agent, and project screens. Reworked the top bar to
+  show the active workspace, git branch, and a search action; removed the
+  hardcoded phase label and the persistent dev-status card row; added
+  `focus-visible` rings for keyboard accessibility; made the sidebar width
+  responsive. See `docs/ui-ux-audit.md`.
 - Verified all quality gates on Windows (Node 22): typecheck, lint (0 warnings),
-  123 tests passing (31 files), and production build.
+  131 tests passing (33 files), and production build.
 - Added `docs/audit.md` with the full codebase audit.
 
 ## Next Tasks

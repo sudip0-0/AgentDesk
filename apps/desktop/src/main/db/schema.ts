@@ -104,3 +104,29 @@ export const qualityCommands = sqliteTable("quality_commands", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull()
 });
+
+export const reviews = sqliteTable("reviews", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id),
+  runId: text("run_id")
+    .notNull()
+    .references(() => agentRuns.id),
+  taskId: text("task_id").references(() => tasks.id),
+  status: text("status").notNull(),
+  risks: text("risks").notNull().default("[]"),
+  recommendations: text("recommendations").notNull().default("[]"),
+  changedFileCount: integer("changed_file_count").notNull().default(0),
+  qualityPassed: integer("quality_passed").notNull().default(0),
+  qualityFailed: integer("quality_failed").notNull().default(0),
+  qualitySkipped: integer("quality_skipped").notNull().default(0),
+  qualityBlocked: integer("quality_blocked").notNull().default(0),
+  createdAt: text("created_at").notNull()
+});
+
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull()
+});

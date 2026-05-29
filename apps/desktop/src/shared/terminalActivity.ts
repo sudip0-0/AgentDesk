@@ -1,4 +1,4 @@
-export type TerminalActivityState = "busy" | "waiting_for_input";
+export type TerminalActivityState = "busy" | "waiting_for_input" | "idle";
 
 export const TERMINAL_OUTPUT_TAIL_LIMIT = 4_096;
 

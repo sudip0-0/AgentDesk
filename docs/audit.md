@@ -91,11 +91,36 @@ Added agent availability detection + test command (Agents requirements):
 Default seeded quality commands (`npm run lint/typecheck/test/build`) are not
 flagged, so existing behavior is unchanged.
 
-## 7. Recommended next tasks
+## 7. Reliability pass
 
-1. Extend the safety classifier to the agent launch preview (warn before spawning
-   a profile whose templated args resolve to a destructive command).
-2. Add an explicit per-project "allow this command" override for blocked quality
-   commands (audited), so power users are not hard-blocked.
-3. Auto-refresh agent availability on a timer or on window focus.
-4. Consider OS-keychain storage if agent profile env ever needs real secrets.
+- `reconcileInterruptedRuns` on startup marks crashed/force-quit `running` runs
+  as `failed` and resets their linked tasks to `ready`.
+- Spawn failures persist a run `errorMessage`, shown on the run detail screen.
+- The quality runner validates the workspace still exists before spawning.
+
+## 8. Review engine + persistence
+
+- `shared/reviewSummary.ts` — pure pass/fail/warning verdict with risks and
+  recommendations, unit tested.
+- `reviews` table (migration 0005) + `reviewRepository` persist a review linked
+  to run and task; run detail can "Save Review" and shows saved history.
+
+## 9. Settings + agent-launch safety + watchdog
+
+- `app_settings` table + `settingsRepository` + `settings:get`/`settings:update`
+  IPC, with an editable Settings screen (block destructive commands, require
+  launch approval, confirm destructive git, idle warning threshold).
+- Agent launches are classified by the safety layer and blocked (gated by the
+  `blockDestructiveCommands` setting) before the PTY spawns.
+- Process watchdog: running sessions idle past the configured threshold are
+  flagged `idle` in the terminal UI (`shared/terminalIdle.ts`).
+
+All four previously recommended next tasks are now implemented.
+
+## 10. Recommended next tasks
+
+1. Auto-refresh agent availability on a timer or on window focus.
+2. Wire `requireAgentLaunchApproval` / `confirmDestructiveGit` settings into the
+   relevant confirmation dialogs (currently the launch flow always confirms).
+3. Consider OS-keychain storage if agent profile env ever needs real secrets.
+4. Add a per-project "allow this command" override for blocked commands (audited).

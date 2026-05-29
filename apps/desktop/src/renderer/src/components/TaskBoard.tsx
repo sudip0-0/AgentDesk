@@ -17,6 +17,7 @@ import { cn } from "../lib/cn";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
+import { EmptyState } from "./ui/EmptyState";
 import { Dialog } from "./ui/Dialog";
 import { Input } from "./ui/Input";
 
@@ -357,10 +358,10 @@ export function TaskBoard({
 
   if (!project) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>No project selected</CardTitle>
-        <CardDescription>Open a project folder before creating tasks.</CardDescription>
-      </Card>
+      <EmptyState
+        description="Open a project folder before creating tasks."
+        title="No project selected"
+      />
     );
   }
 
@@ -390,17 +391,19 @@ export function TaskBoard({
         ) : null}
 
         {isLoading ? (
-          <Card className="border-dashed">
-            <CardTitle>Loading tasks</CardTitle>
-            <CardDescription>Reading local task records from SQLite.</CardDescription>
-          </Card>
+          <EmptyState description="Reading local task records from SQLite." title="Loading tasks" />
         ) : null}
 
         {!isLoading && tasks.length === 0 ? (
-          <Card className="border-dashed">
-            <CardTitle>No tasks yet</CardTitle>
-            <CardDescription>Create a task contract to populate the board.</CardDescription>
-          </Card>
+          <EmptyState
+            action={
+              <Button onClick={openCreateDialog} variant="primary">
+                Create Task
+              </Button>
+            }
+            description="Create a task and assign it to a coding agent."
+            title="No tasks yet"
+          />
         ) : null}
 
         <div className="flex gap-3 overflow-x-auto pb-2">
@@ -660,10 +663,7 @@ function TaskDetailPanel({
 }): React.JSX.Element {
   if (!task) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>Task Detail</CardTitle>
-        <CardDescription>Select a card to inspect its contract.</CardDescription>
-      </Card>
+      <EmptyState description="Select a card to inspect its contract." title="Task Detail" />
     );
   }
 
