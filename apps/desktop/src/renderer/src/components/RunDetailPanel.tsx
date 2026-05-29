@@ -7,6 +7,7 @@ import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { EmptyState } from "./ui/EmptyState";
+import { PageHeader } from "./ui/PageHeader";
 import { StatusBadge } from "./ui/StatusBadge";
 import { cn } from "../lib/cn";
 
@@ -168,15 +169,15 @@ export function RunDetailPanel({
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(320px,420px)_1fr]">
       <div className="grid content-start gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Agent Runs</h2>
-            <p className="mt-1 text-sm text-muted">{project.name}</p>
-          </div>
-          <Button disabled={isLoading} onClick={() => void loadRuns(project.id)} variant="secondary">
-            Refresh
-          </Button>
-        </div>
+        <PageHeader
+          actions={
+            <Button disabled={isLoading} onClick={() => void loadRuns(project.id)} variant="secondary">
+              Refresh
+            </Button>
+          }
+          subtitle={project.name}
+          title="Agent Runs"
+        />
 
         {error ? (
           <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">

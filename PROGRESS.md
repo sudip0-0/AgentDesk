@@ -175,6 +175,11 @@ None.
   hardcoded phase label and the persistent dev-status card row; added
   `focus-visible` rings for keyboard accessibility; made the sidebar width
   responsive. See `docs/ui-ux-audit.md`.
+- UI/UX pass 2: added a dedicated **Dashboard** screen (metric cards, recent
+  runs, next task, quick actions) as the default view; added `Skeleton`,
+  `MetricCard`, and colored `DiffView` primitives; the Git panel now renders
+  colored diffs with a loading skeleton; added a collapsible sidebar and relaxed
+  the body min-width to 720px for narrower windows.
 - Verified all quality gates on Windows (Node 22): typecheck, lint (0 warnings),
   131 tests passing (33 files), and production build.
 - Added `docs/audit.md` with the full codebase audit.

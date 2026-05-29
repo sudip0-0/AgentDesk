@@ -6,8 +6,12 @@ import type { TaskRecord } from "../../../shared/taskTypes";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
+import { DiffView } from "./ui/DiffView";
 import { Dialog } from "./ui/Dialog";
+import { EmptyState } from "./ui/EmptyState";
 import { Input } from "./ui/Input";
+import { PageHeader } from "./ui/PageHeader";
+import { SkeletonCard } from "./ui/Skeleton";
 import { cn } from "../lib/cn";
 
 const emptyStatus: GitStatusResult = {
@@ -252,25 +256,25 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
 
   if (!project) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>No project selected</CardTitle>
-        <CardDescription>Open a project before viewing git status.</CardDescription>
-      </Card>
+      <EmptyState
+        description="Open a project before viewing git status."
+        title="No project selected"
+      />
     );
   }
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(360px,460px)_1fr]">
       <div className="grid content-start gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Git Status</h2>
-            <p className="mt-1 text-sm text-muted">{project.path}</p>
-          </div>
-          <Button disabled={isLoading} onClick={() => void refresh()} variant="secondary">
-            {isLoading ? "Refreshing..." : "Refresh"}
-          </Button>
-        </div>
+        <PageHeader
+          actions={
+            <Button disabled={isLoading} onClick={() => void refresh()} variant="secondary">
+              {isLoading ? "Refreshing..." : "Refresh"}
+            </Button>
+          }
+          subtitle={project.path}
+          title="Git Status"
+        />
 
         {message ? (
           <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
@@ -284,17 +288,21 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
           </div>
         ) : null}
 
-        <Card>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle>{status.isGitRepo ? status.branch ?? "Unknown branch" : "Not a git repo"}</CardTitle>
-              <CardDescription>
-                {status.message ?? `${status.files.length} changed file(s) detected.`}
-              </CardDescription>
+        {isLoading && status.files.length === 0 ? (
+          <SkeletonCard lines={2} />
+        ) : (
+          <Card>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle>{status.isGitRepo ? status.branch ?? "Unknown branch" : "Not a git repo"}</CardTitle>
+                <CardDescription>
+                  {status.message ?? `${status.files.length} changed file(s) detected.`}
+                </CardDescription>
+              </div>
+              <Badge variant={status.isGitRepo ? "success" : "warning"}>Git</Badge>
             </div>
-            <Badge variant={status.isGitRepo ? "success" : "warning"}>Git</Badge>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {status.isGitRepo ? (
           <>
@@ -519,10 +527,7 @@ function GitDiffViewer({
 }): React.JSX.Element {
   if (!file) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>Diff Viewer</CardTitle>
-        <CardDescription>Select a changed file to view its diff.</CardDescription>
-      </Card>
+      <EmptyState description="Select a changed file to view its diff." title="Diff Viewer" />
     );
   }
 
@@ -562,9 +567,7 @@ function GitDiffViewer({
         </div>
       ) : null}
 
-      <pre className="mt-3 max-h-[560px] overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
-        {diff?.diff || "No diff to display."}
-      </pre>
+      <DiffView className="mt-3 max-h-[560px]" diff={diff?.diff ?? ""} />
     </Card>
   );
 }

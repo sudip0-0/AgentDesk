@@ -7,6 +7,7 @@ import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
 import type { TaskRecord } from "../../shared/taskTypes";
 import { AgentProfilesPanel } from "./components/AgentProfilesPanel";
 import { CommandPalette, type CommandPaletteAction } from "./components/CommandPalette";
+import { DashboardPanel } from "./components/DashboardPanel";
 import { DemoFlowPanel } from "./components/DemoFlowPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
 import { GitPanel } from "./components/GitPanel";
@@ -33,7 +34,8 @@ import { Tabs } from "./components/ui/Tabs";
 import { cn } from "./lib/cn";
 
 const navItems = [
-  { id: "projects", label: "Projects" },
+  { id: "dashboard", label: "Dashboard" },
+  { id: "projects", label: "Workspace" },
   { id: "terminal", label: "Terminal" },
   { id: "tasks", label: "Tasks" },
   { id: "agents", label: "Agents" },
@@ -46,12 +48,14 @@ const navItems = [
 
 export function App(): React.JSX.Element {
   const appName = window.agentdesk.app.getName();
-  const [activeNav, setActiveNav] = useState("projects");
+  const [activeNav, setActiveNav] = useState("dashboard");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dbHealth, setDbHealth] = useState<DatabaseHealth | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [overview, setOverview] = useState<ProjectOverview | null>(null);
   const [overviewError, setOverviewError] = useState<string | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const [projectMessage, setProjectMessage] = useState<string | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [isOpeningProject, setIsOpeningProject] = useState(false);
@@ -210,6 +214,7 @@ export function App(): React.JSX.Element {
     }
 
     let cancelled = false;
+    setOverviewLoading(true);
 
     void window.agentdesk.projects
       .getOverview(activeProjectId)
@@ -223,6 +228,11 @@ export function App(): React.JSX.Element {
         if (!cancelled) {
           setOverview(null);
           setOverviewError(error instanceof Error ? error.message : "Failed to load project overview.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setOverviewLoading(false);
         }
       });
 
@@ -266,28 +276,45 @@ export function App(): React.JSX.Element {
   };
 
   return (
-    <div className="grid min-h-screen grid-cols-[200px_1fr] bg-bg xl:grid-cols-[248px_1fr]">
-      <aside className="flex flex-col gap-7 border-r border-border bg-[#121820] p-4 xl:p-5">
-        <div className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-lg border border-border bg-accent font-extrabold text-[#0e151a]">
-            AD
-          </span>
-          <div>
-            <strong className="block text-text">{appName}</strong>
-            <span className="mt-0.5 block text-xs text-muted">Local agent desk</span>
+    <div
+      className={cn(
+        "grid min-h-screen bg-bg",
+        sidebarCollapsed ? "grid-cols-1" : "grid-cols-[200px_1fr] xl:grid-cols-[248px_1fr]"
+      )}
+    >
+      {sidebarCollapsed ? null : (
+        <aside className="flex flex-col gap-7 border-r border-border bg-[#121820] p-4 xl:p-5">
+          <div className="flex items-center gap-3">
+            <span className="grid size-10 place-items-center rounded-lg border border-border bg-accent font-extrabold text-[#0e151a]">
+              AD
+            </span>
+            <div>
+              <strong className="block text-text">{appName}</strong>
+              <span className="mt-0.5 block text-xs text-muted">Local agent desk</span>
+            </div>
           </div>
-        </div>
 
-        <Tabs activeId={activeNav} items={navItems} onChange={setActiveNav} />
-      </aside>
+          <Tabs activeId={activeNav} items={navItems} onChange={setActiveNav} />
+        </aside>
+      )}
 
       <div className="grid min-w-0 grid-rows-[auto_1fr]">
         <header className="flex items-center justify-between gap-4 border-b border-border bg-[#151b22] px-6 py-4">
-          <div className="min-w-0">
-            <span className="text-xs font-bold uppercase tracking-wide text-accent">Workspace</span>
-            <h1 className="mt-1 truncate text-xl font-bold text-text">
-              {activeProject ? activeProject.name : "No workspace open"}
-            </h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <Button
+              aria-label={sidebarCollapsed ? "Show navigation" : "Hide navigation"}
+              onClick={() => setSidebarCollapsed((value) => !value)}
+              size="sm"
+              variant="ghost"
+            >
+              ☰
+            </Button>
+            <div className="min-w-0">
+              <span className="text-xs font-bold uppercase tracking-wide text-accent">Workspace</span>
+              <h1 className="mt-1 truncate text-xl font-bold text-text">
+                {activeProject ? activeProject.name : "No workspace open"}
+              </h1>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {activeProject?.metadata.isGitRepo && activeProject.metadata.currentBranch ? (
@@ -305,6 +332,23 @@ export function App(): React.JSX.Element {
         </header>
 
         <main className="grid content-start gap-4 p-6">
+          {activeNav === "dashboard" ? (
+            <DashboardPanel
+              actions={{
+                onOpenWorkspace: () => void openProjectFolder(),
+                onCreateTask: () => dispatchTaskAction("create"),
+                onLaunchAgent: () => dispatchTaskAction("launch-selected"),
+                onRunChecks: () => dispatchQualityAction("run-all"),
+                onReviewChanges: () => setActiveNav("git"),
+                onOpenRun: openRunDetail
+              }}
+              error={overviewError}
+              isLoading={overviewLoading}
+              overview={overview}
+              project={activeProject}
+            />
+          ) : null}
+
           {activeNav === "projects" ? (
             <section className="grid gap-4">
               <DemoFlowPanel

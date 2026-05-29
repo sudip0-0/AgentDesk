@@ -21,7 +21,7 @@
   }
 
   body {
-    @apply m-0 min-h-screen min-w-[1024px] bg-bg text-text font-sans antialiased;
+    @apply m-0 min-h-screen min-w-[720px] bg-bg text-text font-sans antialiased;
   }
 
   button {

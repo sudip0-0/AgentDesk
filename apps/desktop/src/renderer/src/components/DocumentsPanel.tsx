@@ -10,6 +10,8 @@ import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { Dialog } from "./ui/Dialog";
+import { EmptyState } from "./ui/EmptyState";
+import { PageHeader } from "./ui/PageHeader";
 import { cn } from "../lib/cn";
 
 export function DocumentsPanel({
@@ -145,20 +147,17 @@ export function DocumentsPanel({
 
   if (!project) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>No project selected</CardTitle>
-        <CardDescription>Open a project before generating documentation.</CardDescription>
-      </Card>
+      <EmptyState
+        description="Open a project before generating documentation."
+        title="No project selected"
+      />
     );
   }
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(360px,460px)_1fr]">
       <div className="grid content-start gap-3">
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Documents</h2>
-          <p className="mt-1 text-sm text-muted">{project.path}</p>
-        </div>
+        <PageHeader subtitle={project.path} title="Documents" />
 
         {message ? (
           <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
@@ -268,10 +267,10 @@ export function DocumentsPanel({
 function DocumentPreview({ file }: { file: DocumentPreviewFile | null }): React.JSX.Element {
   if (!file) {
     return (
-      <Card className="border-dashed">
-        <CardTitle>Markdown Preview</CardTitle>
-        <CardDescription>Generate a preview before writing documentation.</CardDescription>
-      </Card>
+      <EmptyState
+        description="Generate a preview before writing documentation."
+        title="Markdown Preview"
+      />
     );
   }
 

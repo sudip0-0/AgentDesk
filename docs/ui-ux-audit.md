@@ -61,9 +61,22 @@ panel).
 
 ## Remaining UI gaps (recommended next)
 
-- Responsive: the shell is fixed at a 248px sidebar + content grid and assumes a
-  wide window; a collapsible sidebar for narrow widths is not yet implemented.
-- A dedicated Dashboard distinct from the Projects screen (the Projects overview
-  currently doubles as the dashboard).
-- Skeleton loaders for slow IPC (git status, overview) instead of plain text.
-- Diff readability (syntax/line coloring) in the Git panel.
+- A polished narrow/tablet table→card reflow (the sidebar now collapses and the
+  min-width was relaxed, but some two-column panels still assume width).
+- Real markdown rendering in the Docs preview (currently raw text).
+- Inline syntax highlighting inside diff lines (line-level coloring is done).
+
+## Second UI pass (gaps closed)
+
+- Added a dedicated **Dashboard** screen (`DashboardPanel`) with metric cards
+  (branch, active/needs-review/failed tasks), recent runs, next task, and quick
+  actions; it is now the default screen and the Projects tab was renamed
+  "Workspace".
+- Added reusable `Skeleton`/`SkeletonCard`, `MetricCard`, and `DiffView`
+  (per-line colored git diff) primitives.
+- Adopted `PageHeader` across Runs, Git, and Docs; converted remaining
+  hand-rolled empty states in Git and Docs to `EmptyState`.
+- Git panel now renders colored diffs and shows a skeleton while status loads;
+  the dashboard shows skeletons while the overview loads.
+- Added a collapsible sidebar (header toggle) and relaxed the body min-width from
+  1024px to 720px for narrower windows.
