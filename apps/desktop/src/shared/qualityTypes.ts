@@ -14,7 +14,7 @@ export interface QualityRunContext {
   taskTitle?: string | null;
 }
 
-export type QualityCheckStatus = "passed" | "failed" | "skipped";
+export type QualityCheckStatus = "passed" | "failed" | "skipped" | "blocked";
 
 export interface QualityCommandRecord {
   id: string;

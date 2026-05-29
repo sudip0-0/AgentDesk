@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import type { RunQualityChecksInput, QualityCheckRecord } from "../../shared/qualityTypes.js";
+import { classifyCommand, describeCommandRisk } from "../../shared/commandSafety.js";
 import { getProjectById } from "../db/repositories/projectRepository.js";
 import {
   listQualityCommands,
