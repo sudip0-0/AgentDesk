@@ -157,8 +157,12 @@ None.
 - Reliability: the quality runner validates the project folder still exists and
   is a directory before spawning, returning a clear error if the workspace was
   moved or deleted.
+- Review engine: added `shared/reviewSummary.ts`, a pure derived view that turns
+  a run's quality results, changed files, and process outcome into a single
+  pass/fail/warning verdict with risks and recommended next actions, surfaced in
+  a Review Summary card on the run detail screen.
 - Verified all quality gates on Windows (Node 22): typecheck, lint (0 warnings),
-  113 tests passing (30 files), and production build.
+  123 tests passing (31 files), and production build.
 - Added `docs/audit.md` with the full codebase audit.
 
 ## Next Tasks

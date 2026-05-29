@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AgentRunDetail, AgentRunListItem } from "../../../shared/runDetailTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
+import { buildReviewSummary, type ReviewStatus } from "../../../shared/reviewSummary";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
@@ -40,6 +41,18 @@ const qualityStatusVariant = (status: string): "default" | "success" | "warning"
   }
 
   if (status === "skipped") {
+    return "warning";
+  }
+
+  return "danger";
+};
+
+const reviewStatusVariant = (status: ReviewStatus): "success" | "warning" | "danger" => {
+  if (status === "passed") {
+    return "success";
+  }
+
+  if (status === "warning") {
     return "warning";
   }
 
@@ -191,6 +204,56 @@ export function RunDetailPanel({
   );
 }
 
+function ReviewSummaryCard({ detail }: { detail: AgentRunDetail }): React.JSX.Element {
+  const summary = buildReviewSummary({
+    runStatus: detail.status,
+    exitCode: detail.exitCode,
+    qualityResults: detail.qualityResults.map((check) => ({ label: check.label, status: check.status })),
+    changedFiles: detail.changedFiles.map((file) => ({ path: file.path, status: file.status }))
+  });
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardTitle>Review Summary</CardTitle>
+        <Badge variant={reviewStatusVariant(summary.status)}>{summary.status}</Badge>
+      </div>
+      <CardDescription>
+        {summary.changedFileCount} changed file(s) · {summary.qualityCounts.passed} passed ·{" "}
+        {summary.qualityCounts.failed} failed · {summary.qualityCounts.skipped} skipped ·{" "}
+        {summary.qualityCounts.blocked} blocked
+      </CardDescription>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wide text-muted">Risks</span>
+          {summary.risks.length === 0 ? (
+            <p className="mt-1 text-sm text-muted">No risks detected.</p>
+          ) : (
+            <ul className="mt-1 grid gap-1">
+              {summary.risks.map((risk) => (
+                <li className="text-sm text-[#ffd0d0]" key={risk}>
+                  • {risk}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wide text-muted">Recommended Next</span>
+          <ul className="mt-1 grid gap-1">
+            {summary.recommendations.map((recommendation) => (
+              <li className="text-sm text-muted" key={recommendation}>
+                • {recommendation}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function RunDetail({ detail }: { detail: AgentRunDetail | null }): React.JSX.Element {
   if (!detail) {
     return (
@@ -227,6 +290,8 @@ function RunDetail({ detail }: { detail: AgentRunDetail | null }): React.JSX.Ele
           <span>Notes: {detail.notes ?? "none"}</span>
         </div>
       </Card>
+
+      <ReviewSummaryCard detail={detail} />
 
       <Card>
         <CardTitle>Prompt</CardTitle>
