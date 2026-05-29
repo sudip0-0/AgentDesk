@@ -52,6 +52,7 @@ import type {
   TerminalActivityEvent,
   TerminalDataEvent,
   TerminalErrorEvent,
+  TerminalSessionsEvent,
   TerminalExitEvent,
   TerminalKillRequest,
   TerminalResizeRequest,
@@ -130,10 +131,12 @@ export interface AgentDeskApi {
     write: (request: TerminalWriteRequest) => void;
     resize: (request: TerminalResizeRequest) => void;
     kill: (request: TerminalKillRequest) => Promise<void>;
+    getSessionCount: () => Promise<number>;
     onData: (listener: (event: TerminalDataEvent) => void) => Unsubscribe;
     onExit: (listener: (event: TerminalExitEvent) => void) => Unsubscribe;
     onError: (listener: (event: TerminalErrorEvent) => void) => Unsubscribe;
     onActivity: (listener: (event: TerminalActivityEvent) => void) => Unsubscribe;
+    onSessions: (listener: (event: TerminalSessionsEvent) => void) => Unsubscribe;
   };
   settings: {
     get: () => Promise<AppSettings>;

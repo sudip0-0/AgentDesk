@@ -33,6 +33,13 @@ export type AppSettingsUpdate = Partial<AppSettings>;
 export interface UiPreferences {
   sidebarCollapsed: boolean;
   lastActiveScreen: string;
+  /** Per-project last-selected task/run ids, keyed by project id, for fast resume. */
+  projectSelections: Record<string, ProjectSelection>;
+}
+
+export interface ProjectSelection {
+  taskId?: string;
+  runId?: string;
 }
 
 export const UI_SCREEN_IDS = [
@@ -50,10 +57,41 @@ export const UI_SCREEN_IDS = [
 
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   sidebarCollapsed: false,
-  lastActiveScreen: "dashboard"
+  lastActiveScreen: "dashboard",
+  projectSelections: {}
 };
 
 export type UiPreferencesUpdate = Partial<UiPreferences>;
+
+const sanitizeProjectSelections = (
+  value: Record<string, ProjectSelection> | undefined
+): Record<string, ProjectSelection> => {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+
+  const result: Record<string, ProjectSelection> = {};
+
+  for (const [projectId, selection] of Object.entries(value)) {
+    if (!selection || typeof selection !== "object") {
+      continue;
+    }
+
+    const entry: ProjectSelection = {};
+
+    if (typeof selection.taskId === "string") {
+      entry.taskId = selection.taskId;
+    }
+
+    if (typeof selection.runId === "string") {
+      entry.runId = selection.runId;
+    }
+
+    result[projectId] = entry;
+  }
+
+  return result;
+};
 
 export const normalizeUiPreferences = (
   current: UiPreferences,
@@ -66,9 +104,23 @@ export const normalizeUiPreferences = (
 
   return {
     sidebarCollapsed: Boolean(next.sidebarCollapsed),
-    lastActiveScreen: screen
+    lastActiveScreen: screen,
+    projectSelections: sanitizeProjectSelections(next.projectSelections)
   };
 };
+
+/** Merges a single project's selection into the preferences (immutably). */
+export const setProjectSelection = (
+  current: UiPreferences,
+  projectId: string,
+  selection: ProjectSelection
+): UiPreferences => ({
+  ...current,
+  projectSelections: {
+    ...current.projectSelections,
+    [projectId]: { ...current.projectSelections[projectId], ...selection }
+  }
+});
 
 /** Clamps and normalizes a partial settings patch against the allowed ranges. */
 export const normalizeAppSettings = (

@@ -29,7 +29,18 @@ const settingsUpdateSchema = z
 const uiPreferencesUpdateSchema = z
   .object({
     sidebarCollapsed: z.boolean().optional(),
-    lastActiveScreen: z.enum(UI_SCREEN_IDS).optional()
+    lastActiveScreen: z.enum(UI_SCREEN_IDS).optional(),
+    projectSelections: z
+      .record(
+        z.string(),
+        z
+          .object({
+            taskId: z.string().optional(),
+            runId: z.string().optional()
+          })
+          .strict()
+      )
+      .optional()
   })
   .strict();
 

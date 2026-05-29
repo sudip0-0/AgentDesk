@@ -84,4 +84,6 @@ export const registerTerminalIpc = (): void => {
 
     terminalSessionManager.kill(parsed.data.id, event.sender);
   });
+
+  ipcMain.handle("terminal:session-count", () => terminalSessionManager.getActiveSessionCount());
 };

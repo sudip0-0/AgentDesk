@@ -74,6 +74,17 @@ export class TerminalSessionManager {
     return this.sessions.size > 0;
   }
 
+  public getActiveSessionCount(): number {
+    return this.sessions.size;
+  }
+
+  /** Sends the current active-session count to a specific renderer. */
+  private sendSessionCount(webContents: WebContents): void {
+    if (!webContents.isDestroyed()) {
+      webContents.send("terminal:sessions", { count: this.sessions.size });
+    }
+  }
+
   public create(
     request: CreateTerminalRequest,
     webContents: WebContents
@@ -210,6 +221,7 @@ export class TerminalSessionManager {
       pty
     });
     this.ensureIdleWatchdog();
+    this.sendSessionCount(webContents);
 
     if (command?.promptWillBeSentToStdin && prompt) {
       setTimeout(() => {
@@ -255,6 +267,7 @@ export class TerminalSessionManager {
       this.syncTaskStatusAfterExit(session, exitCode);
       this.sessions.delete(id);
       this.stopIdleWatchdogIfEmpty();
+      this.sendSessionCount(webContents);
 
       if (!webContents.isDestroyed()) {
         const event: TerminalExitEvent = { id, exitCode, signal };

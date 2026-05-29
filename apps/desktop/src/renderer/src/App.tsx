@@ -106,6 +106,32 @@ export function App(): React.JSX.Element {
     setActiveNav("runs");
   }, []);
 
+  // Restore the last-selected run for the active project (fast resume).
+  useEffect(() => {
+    if (!prefsLoadedRef.current || !activeProjectId) {
+      return;
+    }
+
+    void window.agentdesk.settings
+      .getUi()
+      .then((prefs: UiPreferences) => {
+        const selection = prefs.projectSelections[activeProjectId];
+        setSelectedRunId(selection?.runId ?? null);
+      })
+      .catch(() => undefined);
+  }, [activeProjectId]);
+
+  // Persist the selected run per project.
+  useEffect(() => {
+    if (!prefsLoadedRef.current || !activeProjectId || !selectedRunId) {
+      return;
+    }
+
+    void window.agentdesk.settings
+      .updateUi({ projectSelections: { [activeProjectId]: { runId: selectedRunId } } })
+      .catch(() => undefined);
+  }, [activeProjectId, selectedRunId]);
+
   useAppKeyboardShortcuts({
     onCommandPalette: () => setPaletteOpen(true),
     onCreateTask: () => dispatchTaskAction("create"),
@@ -219,6 +245,18 @@ export function App(): React.JSX.Element {
 
     void window.agentdesk.settings.updateUi({ sidebarCollapsed }).catch(() => undefined);
   }, [sidebarCollapsed]);
+
+  // Running-agent count comes from the main process (source of truth) so it
+  // reflects every active PTY session, not just the current terminal panel state.
+  useEffect(() => {
+    void window.agentdesk.terminals.getSessionCount().then(setRunningAgentCount).catch(() => undefined);
+
+    const unsubscribe = window.agentdesk.terminals.onSessions(({ count }: { count: number }) => {
+      setRunningAgentCount(count);
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     void window.agentdesk.db.getHealth().then(setDbHealth).catch(() => {
@@ -483,7 +521,6 @@ export function App(): React.JSX.Element {
                 setQualityRunContext(context);
                 setActiveNav("quality");
               }}
-              onRunningCountChange={setRunningAgentCount}
               onTaskStatusChanged={refreshOverview}
               promptSendRequest={promptSendRequest}
               project={activeProject}

@@ -16,6 +16,7 @@ import type {
   TerminalExitEvent,
   TerminalKillRequest,
   TerminalResizeRequest,
+  TerminalSessionsEvent,
   TerminalWriteRequest
 } from "../shared/terminalTypes.js";
 import type { DatabaseHealth } from "../shared/dbTypes.js";
@@ -71,10 +72,11 @@ type TerminalDataListener = (event: TerminalDataEvent) => void;
 type TerminalExitListener = (event: TerminalExitEvent) => void;
 type TerminalErrorListener = (event: TerminalErrorEvent) => void;
 type TerminalActivityListener = (event: TerminalActivityEvent) => void;
+type TerminalSessionsListener = (event: TerminalSessionsEvent) => void;
 type Unsubscribe = () => void;
 
 const subscribe = <T>(
-  channel: "terminal:data" | "terminal:exit" | "terminal:error" | "terminal:activity",
+  channel: "terminal:data" | "terminal:exit" | "terminal:error" | "terminal:activity" | "terminal:sessions",
   listener: (event: T) => void
 ): Unsubscribe => {
   const wrappedListener = (_event: Electron.IpcRendererEvent, payload: T): void => {
@@ -193,6 +195,8 @@ const agentdeskApi: AgentDeskApi = {
     },
     kill: (request: TerminalKillRequest): Promise<void> =>
       ipcRenderer.invoke("terminal:kill", request) as Promise<void>,
+    getSessionCount: (): Promise<number> =>
+      ipcRenderer.invoke("terminal:session-count") as Promise<number>,
     onData: (listener: TerminalDataListener): Unsubscribe =>
       subscribe<TerminalDataEvent>("terminal:data", listener),
     onExit: (listener: TerminalExitListener): Unsubscribe =>
@@ -200,7 +204,9 @@ const agentdeskApi: AgentDeskApi = {
     onError: (listener: TerminalErrorListener): Unsubscribe =>
       subscribe<TerminalErrorEvent>("terminal:error", listener),
     onActivity: (listener: TerminalActivityListener): Unsubscribe =>
-      subscribe<TerminalActivityEvent>("terminal:activity", listener)
+      subscribe<TerminalActivityEvent>("terminal:activity", listener),
+    onSessions: (listener: TerminalSessionsListener): Unsubscribe =>
+      subscribe<TerminalSessionsEvent>("terminal:sessions", listener)
   },
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke("settings:get") as Promise<AppSettings>,

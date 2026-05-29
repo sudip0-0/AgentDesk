@@ -74,7 +74,15 @@ export const getUiPreferences = (): UiPreferences => {
 };
 
 export const updateUiPreferences = (patch: UiPreferencesUpdate): UiPreferences => {
-  const next = normalizeUiPreferences(getUiPreferences(), patch);
+  const current = getUiPreferences();
+  // Merge per-project selections so updating one project keeps the others.
+  const mergedPatch: UiPreferencesUpdate = {
+    ...patch,
+    projectSelections: patch.projectSelections
+      ? { ...current.projectSelections, ...patch.projectSelections }
+      : current.projectSelections
+  };
+  const next = normalizeUiPreferences(current, mergedPatch);
   const database = getDatabase();
   const now = new Date().toISOString();
 

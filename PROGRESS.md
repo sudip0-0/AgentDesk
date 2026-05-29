@@ -185,8 +185,13 @@ None.
   (restored on launch); kept the terminal panel always mounted so navigating
   screens no longer kills running agents; added a live "N running" agent
   indicator in the top bar; relaxed the body min-width to 560px.
+- UI/UX pass 4: extracted markdown parsing to `shared/markdownParser.ts` with
+  tables and nested-list support; added word-level diff highlighting
+  (`shared/diffHighlight.ts`) in the diff viewer; moved the running-agent count
+  to a main-process source of truth (`terminal:sessions` broadcast); persisted
+  the per-project last-selected run for fast resume.
 - Verified all quality gates on Windows (Node 22): typecheck, lint (0 warnings),
-  134 tests passing (33 files), and production build.
+  151 tests passing (35 files), and production build.
 - Added `docs/audit.md` with the full codebase audit.
 
 ## Next Tasks

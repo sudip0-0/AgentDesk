@@ -42,6 +42,10 @@ export interface TerminalActivityEvent {
   state: TerminalActivityState;
 }
 
+export interface TerminalSessionsEvent {
+  count: number;
+}
+
 export interface TerminalResizeRequest {
   id: string;
   cols: number;

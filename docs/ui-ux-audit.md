@@ -61,9 +61,21 @@ panel).
 
 ## Remaining UI gaps (recommended next)
 
-- Live markdown rendering currently supports the common subset (headings, lists,
-  code, quotes, inline emphasis); tables and nested lists are not yet handled.
-- Diff coloring is per-line, not intra-line token highlighting.
+- Persisting the per-project last-selected *task* (run selection is persisted;
+  task selection would require lifting the task board's internal selection).
+- Markdown image syntax and reference links are not handled.
+
+## Fourth UI pass (gaps closed)
+
+- Markdown: extracted parsing into `shared/markdownParser.ts` (pure + tested) and
+  added GitHub-style tables and nested lists to the renderer.
+- Diff: added `shared/diffHighlight.ts` (LCS word-level diff, tested) and the
+  diff viewer now highlights changed tokens within paired removed/added lines.
+- Running-agent indicator: now sourced from the main process. The terminal
+  session manager broadcasts `terminal:sessions` and exposes a count query, so
+  the top-bar pill reflects every active PTY, not just the renderer's view.
+- Resume: the per-project last-selected run id is persisted in `app_settings` UI
+  preferences and restored when switching projects.
 
 ## Third UI pass (gaps closed)
 

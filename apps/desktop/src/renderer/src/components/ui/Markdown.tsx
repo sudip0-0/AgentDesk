@@ -1,27 +1,20 @@
 import type { ReactNode } from "react";
+import { parseMarkdownBlocks, type MarkdownList } from "../../../../shared/markdownParser";
 
 /**
  * Minimal, dependency-free markdown renderer for document previews.
  *
- * Supports headings, fenced code blocks, unordered/ordered lists, blockquotes,
- * horizontal rules, paragraphs, and inline code, bold, and italic spans. It
- * renders to React elements (no dangerouslySetInnerHTML), so repo content is
- * never injected as raw HTML. Unsupported syntax falls back to plain text.
+ * Parsing lives in shared/markdownParser (pure + tested); this file only maps
+ * the block tree to React elements. It renders to elements, never
+ * dangerouslySetInnerHTML, so repo content is never injected as raw HTML.
+ * Supports headings, fenced code, ordered/unordered nested lists, blockquotes,
+ * horizontal rules, tables, and inline code, bold, and italic spans.
  */
-
-type Block =
-  | { kind: "heading"; level: number; text: string }
-  | { kind: "code"; text: string }
-  | { kind: "list"; ordered: boolean; items: string[] }
-  | { kind: "quote"; text: string }
-  | { kind: "hr" }
-  | { kind: "paragraph"; text: string };
 
 let inlineKey = 0;
 
 const renderInline = (text: string): ReactNode[] => {
   const nodes: ReactNode[] = [];
-  // Split on inline code, bold, then italic, keeping delimiters.
   const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -64,105 +57,6 @@ const renderInline = (text: string): ReactNode[] => {
   return nodes;
 };
 
-const parseBlocks = (markdown: string): Block[] => {
-  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
-  const blocks: Block[] = [];
-  let index = 0;
-
-  while (index < lines.length) {
-    const line = lines[index] ?? "";
-
-    if (line.trim() === "") {
-      index += 1;
-      continue;
-    }
-
-    // Fenced code block
-    if (line.trimStart().startsWith("```")) {
-      const codeLines: string[] = [];
-      index += 1;
-      while (index < lines.length && !(lines[index] ?? "").trimStart().startsWith("```")) {
-        codeLines.push(lines[index] ?? "");
-        index += 1;
-      }
-      index += 1; // skip closing fence
-      blocks.push({ kind: "code", text: codeLines.join("\n") });
-      continue;
-    }
-
-    // Horizontal rule
-    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
-      blocks.push({ kind: "hr" });
-      index += 1;
-      continue;
-    }
-
-    // Heading
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (heading) {
-      blocks.push({ kind: "heading", level: heading[1]!.length, text: heading[2]!.trim() });
-      index += 1;
-      continue;
-    }
-
-    // Blockquote
-    if (line.trimStart().startsWith(">")) {
-      const quoteLines: string[] = [];
-      while (index < lines.length && (lines[index] ?? "").trimStart().startsWith(">")) {
-        quoteLines.push((lines[index] ?? "").replace(/^\s*>\s?/, ""));
-        index += 1;
-      }
-      blocks.push({ kind: "quote", text: quoteLines.join(" ") });
-      continue;
-    }
-
-    // List (unordered or ordered)
-    const isUnordered = /^\s*[-*+]\s+/.test(line);
-    const isOrdered = /^\s*\d+\.\s+/.test(line);
-    if (isUnordered || isOrdered) {
-      const items: string[] = [];
-      while (index < lines.length) {
-        const current = lines[index] ?? "";
-        const unorderedMatch = /^\s*[-*+]\s+(.*)$/.exec(current);
-        const orderedMatch = /^\s*\d+\.\s+(.*)$/.exec(current);
-
-        if (isUnordered && unorderedMatch) {
-          items.push(unorderedMatch[1]!);
-        } else if (isOrdered && orderedMatch) {
-          items.push(orderedMatch[1]!);
-        } else {
-          break;
-        }
-
-        index += 1;
-      }
-      blocks.push({ kind: "list", ordered: isOrdered, items });
-      continue;
-    }
-
-    // Paragraph (gather consecutive non-blank, non-structural lines)
-    const paragraphLines: string[] = [];
-    while (index < lines.length) {
-      const current = lines[index] ?? "";
-      if (
-        current.trim() === "" ||
-        current.trimStart().startsWith("```") ||
-        /^(#{1,6})\s+/.test(current) ||
-        /^\s*[-*+]\s+/.test(current) ||
-        /^\s*\d+\.\s+/.test(current) ||
-        current.trimStart().startsWith(">")
-      ) {
-        break;
-      }
-      paragraphLines.push(current.trim());
-      index += 1;
-    }
-    blocks.push({ kind: "paragraph", text: paragraphLines.join(" ") });
-  }
-
-  return blocks;
-};
-
 const headingClass = (level: number): string => {
   switch (level) {
     case 1:
@@ -176,6 +70,25 @@ const headingClass = (level: number): string => {
   }
 };
 
+function MarkdownListView({ list, depth = 0 }: { list: MarkdownList; depth?: number }): React.JSX.Element {
+  const ListTag = list.ordered ? "ol" : "ul";
+
+  return (
+    <ListTag
+      className={`grid gap-1 pl-5 text-sm text-muted ${list.ordered ? "list-decimal" : "list-disc"} ${
+        depth === 0 ? "mt-2" : "mt-1"
+      }`}
+    >
+      {list.items.map((item, itemIndex) => (
+        <li key={itemIndex}>
+          {renderInline(item.text)}
+          {item.children ? <MarkdownListView depth={depth + 1} list={item.children} /> : null}
+        </li>
+      ))}
+    </ListTag>
+  );
+}
+
 export function Markdown({
   content,
   className
@@ -183,7 +96,7 @@ export function Markdown({
   content: string;
   className?: string;
 }): React.JSX.Element {
-  const blocks = parseBlocks(content);
+  const blocks = parseMarkdownBlocks(content);
 
   return (
     <div className={className}>
@@ -191,7 +104,7 @@ export function Markdown({
         const key = `block-${blockIndex}`;
 
         if (block.kind === "heading") {
-          const Tag = (`h${Math.min(block.level + 1, 6)}` as keyof React.JSX.IntrinsicElements);
+          const Tag = `h${Math.min(block.level + 1, 6)}` as keyof React.JSX.IntrinsicElements;
           return (
             <Tag className={`mt-4 first:mt-0 ${headingClass(block.level)}`} key={key}>
               {renderInline(block.text)}
@@ -211,16 +124,38 @@ export function Markdown({
         }
 
         if (block.kind === "list") {
-          const ListTag = block.ordered ? "ol" : "ul";
+          return <MarkdownListView key={key} list={block.list} />;
+        }
+
+        if (block.kind === "table") {
           return (
-            <ListTag
-              className={`mt-2 grid gap-1 pl-5 text-sm text-muted ${block.ordered ? "list-decimal" : "list-disc"}`}
-              key={key}
-            >
-              {block.items.map((item, itemIndex) => (
-                <li key={`${key}-${itemIndex}`}>{renderInline(item)}</li>
-              ))}
-            </ListTag>
+            <div className="mt-3 overflow-auto rounded-md border border-border" key={key}>
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="bg-panel-strong">
+                    {block.headers.map((header, headerIndex) => (
+                      <th
+                        className="border-b border-border px-3 py-2 font-bold text-text"
+                        key={headerIndex}
+                      >
+                        {renderInline(header)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, rowIndex) => (
+                    <tr className="odd:bg-[#10161d]" key={rowIndex}>
+                      {row.map((cell, cellIndex) => (
+                        <td className="border-b border-border px-3 py-2 text-muted" key={cellIndex}>
+                          {renderInline(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           );
         }
 

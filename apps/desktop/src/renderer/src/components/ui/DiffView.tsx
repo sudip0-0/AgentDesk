@@ -1,4 +1,5 @@
 import { cn } from "../../lib/cn";
+import { diffLineTokens, type DiffSegment } from "../../../../shared/diffHighlight";
 
 type DiffLineKind = "add" | "remove" | "hunk" | "meta" | "context";
 
@@ -30,9 +31,65 @@ const lineClasses: Record<DiffLineKind, string> = {
   context: "text-muted"
 };
 
+const intraClasses: Record<"add" | "remove", string> = {
+  add: "rounded-sm bg-accent/30 text-text",
+  remove: "rounded-sm bg-danger/30 text-text"
+};
+
+interface RenderedLine {
+  kind: DiffLineKind;
+  content: string;
+  segments?: DiffSegment[];
+}
+
 /**
- * Renders a unified git diff with per-line coloring for additions, deletions,
- * and hunk headers. Falls back to a plain message when there is no diff.
+ * Builds rendered lines, computing intra-line (word-level) segments for each
+ * removed line that is immediately followed by an added line in the same hunk.
+ */
+const buildRenderedLines = (lines: string[]): RenderedLine[] => {
+  const rendered: RenderedLine[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!;
+    const kind = classifyLine(line);
+    const nextLine = lines[index + 1];
+
+    if (kind === "remove" && nextLine !== undefined && classifyLine(nextLine) === "add") {
+      const { removed, addedSegments } = diffLineTokens(line.slice(1), nextLine.slice(1));
+      rendered.push({ kind: "remove", content: line, segments: removed });
+      rendered.push({ kind: "add", content: nextLine, segments: addedSegments });
+      index += 1; // consume the paired add line
+      continue;
+    }
+
+    rendered.push({ kind, content: line });
+  }
+
+  return rendered;
+};
+
+const renderSegments = (
+  kind: "add" | "remove",
+  prefix: string,
+  segments: DiffSegment[]
+): React.JSX.Element => (
+  <>
+    {prefix}
+    {segments.map((segment, segmentIndex) =>
+      segment.changed ? (
+        <span className={intraClasses[kind]} key={segmentIndex}>
+          {segment.text}
+        </span>
+      ) : (
+        <span key={segmentIndex}>{segment.text}</span>
+      )
+    )}
+  </>
+);
+
+/**
+ * Renders a unified git diff with per-line coloring plus word-level highlighting
+ * of changed tokens within paired removed/added lines.
  */
 export function DiffView({
   diff,
@@ -51,7 +108,7 @@ export function DiffView({
     );
   }
 
-  const lines = diff.split("\n");
+  const rendered = buildRenderedLines(diff.split("\n"));
 
   return (
     <div
@@ -60,19 +117,16 @@ export function DiffView({
         className
       )}
     >
-      {lines.map((line, index) => {
-        const kind = classifyLine(line);
-
-        return (
-          <div
-            className={cn("whitespace-pre-wrap break-words px-2 py-px", lineClasses[kind])}
-            // Diff lines have no stable id; index is acceptable for a static render.
-            key={index}
-          >
-            {line || " "}
-          </div>
-        );
-      })}
+      {rendered.map((line, index) => (
+        <div
+          className={cn("whitespace-pre-wrap break-words px-2 py-px", lineClasses[line.kind])}
+          key={index}
+        >
+          {line.segments && (line.kind === "add" || line.kind === "remove")
+            ? renderSegments(line.kind, line.content.slice(0, 1), line.segments)
+            : line.content || " "}
+        </div>
+      ))}
     </div>
   );
 }

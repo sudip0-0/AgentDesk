@@ -5,7 +5,8 @@ import {
   IDLE_WARNING_SECONDS_MAX,
   IDLE_WARNING_SECONDS_MIN,
   normalizeAppSettings,
-  normalizeUiPreferences
+  normalizeUiPreferences,
+  setProjectSelection
 } from "./settingsTypes.js";
 
 describe("normalizeAppSettings", () => {
@@ -59,5 +60,35 @@ describe("normalizeUiPreferences", () => {
   it("coerces the sidebar flag to a boolean", () => {
     const next = normalizeUiPreferences(DEFAULT_UI_PREFERENCES, { sidebarCollapsed: true });
     expect(next.sidebarCollapsed).toBe(true);
+  });
+
+  it("sanitizes project selections, dropping non-string ids", () => {
+    const next = normalizeUiPreferences(DEFAULT_UI_PREFERENCES, {
+      projectSelections: {
+        p1: { taskId: "t1", runId: "r1" },
+        // @ts-expect-error testing runtime sanitization of bad input
+        p2: { taskId: 5, runId: "r2" }
+      }
+    });
+
+    expect(next.projectSelections.p1).toEqual({ taskId: "t1", runId: "r1" });
+    expect(next.projectSelections.p2).toEqual({ runId: "r2" });
+  });
+});
+
+describe("setProjectSelection", () => {
+  it("merges a project selection without dropping other projects", () => {
+    const base = setProjectSelection(DEFAULT_UI_PREFERENCES, "p1", { runId: "r1" });
+    const next = setProjectSelection(base, "p2", { taskId: "t2" });
+
+    expect(next.projectSelections.p1).toEqual({ runId: "r1" });
+    expect(next.projectSelections.p2).toEqual({ taskId: "t2" });
+  });
+
+  it("merges fields within the same project", () => {
+    const base = setProjectSelection(DEFAULT_UI_PREFERENCES, "p1", { runId: "r1" });
+    const next = setProjectSelection(base, "p1", { taskId: "t1" });
+
+    expect(next.projectSelections.p1).toEqual({ runId: "r1", taskId: "t1" });
   });
 });
