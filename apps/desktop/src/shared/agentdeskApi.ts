@@ -5,6 +5,7 @@ import type {
   AgentProfileRecord,
   AgentProfileUpdateInput
 } from "./agentProfileTypes.js";
+import type { AgentAvailability, AgentCommandTestResult } from "./agentAvailability.js";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "./projectTypes.js";
 import type {
   CreateFixTaskInput,
@@ -89,6 +90,8 @@ export interface AgentDeskApi {
     create: (input: AgentProfileInput) => Promise<AgentProfileRecord>;
     update: (input: AgentProfileUpdateInput) => Promise<AgentProfileRecord>;
     delete: (input: AgentProfileDeleteInput) => Promise<void>;
+    listAvailability: () => Promise<AgentAvailability[]>;
+    test: (input: AgentProfileDeleteInput) => Promise<AgentCommandTestResult>;
   };
   runs: {
     list: (projectId: string) => Promise<AgentRunListItem[]>;

@@ -36,8 +36,9 @@ const safetyRules: SafetyRule[] = [
     id: "rm-recursive-force",
     level: "block",
     reason: "Recursive force delete (rm -rf) can erase files irreversibly.",
-    // rm with both recursive and force flags, in any flag order/combination.
-    pattern: /\brm\s+(?:-[a-z]*\s+)*-[a-z]*r[a-z]*f|\brm\s+(?:-[a-z]*\s+)*-[a-z]*f[a-z]*r|\brm\s+(?:-[a-z]*\s+)*--(?:recursive|force)\b/i
+    // rm where the flags include both a recursive and a force flag, in any order
+    // or split across separate flags (-rf, -fr, -r -f, --recursive --force).
+    pattern: /\brm\b(?=[^\n]*(?:-[a-z]*r|--recursive))(?=[^\n]*(?:-[a-z]*f|--force))/i
   },
   {
     id: "windows-del-recursive",
@@ -79,7 +80,7 @@ const safetyRules: SafetyRule[] = [
     id: "disk-format",
     level: "block",
     reason: "Disk format / partition commands destroy data.",
-    pattern: /\b(?:mkfs(?:\.\w+)?|format\s+[a-z]:|diskpart)\b/i
+    pattern: /\bmkfs(?:\.\w+)?\b|\bformat\s+[a-z]:|\bdiskpart\b/i
   },
   {
     id: "dd-write",

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
 import type { RunQualityChecksInput, QualityCheckRecord } from "../../shared/qualityTypes.js";
 import { classifyCommand, describeCommandRisk } from "../../shared/commandSafety.js";
 import { getProjectById } from "../db/repositories/projectRepository.js";
@@ -105,6 +106,12 @@ export const runQualityChecks = async (
     throw new Error("Project was not found.");
   }
 
+  if (!existsSync(project.path) || !statSync(project.path).isDirectory()) {
+    throw new Error(
+      `Project folder is missing or is not a directory: ${project.path}. Re-open the workspace before running checks.`
+    );
+  }
+
   if (input.taskId) {
     assertTaskBelongsToProject(input.taskId, input.projectId);
   }
@@ -129,6 +136,26 @@ export const runQualityChecks = async (
           command: command.command,
           status: "skipped",
           output: "Command is empty.",
+          exitCode: null,
+          startedAt,
+          finishedAt: new Date().toISOString()
+        })
+      );
+      continue;
+    }
+
+    const risk = classifyCommand(command.command);
+
+    if (risk.level === "block") {
+      results.push(
+        saveQualityCheck({
+          projectId: input.projectId,
+          taskId: input.taskId,
+          agentRunId: input.agentRunId,
+          label: command.label,
+          command: command.command,
+          status: "blocked",
+          output: `AgentDesk blocked this command for safety and did not run it.\n${describeCommandRisk(risk)}`,
           exitCode: null,
           startedAt,
           finishedAt: new Date().toISOString()

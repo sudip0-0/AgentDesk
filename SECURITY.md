@@ -30,7 +30,28 @@ Mitigation:
 - require confirmation for destructive app actions
 - do not auto-run unknown commands silently
 - provide kill button
+- block clearly destructive commands in app-run quality checks (see Command Safety Layer below)
 - allow per-project command allowlist later
+
+### Command Safety Layer
+
+AgentDesk classifies command text before the app runs it as a quality check
+(`shared/commandSafety.ts`). Commands that match destructive patterns are
+**blocked** (recorded with a `blocked` status and not executed); riskier-looking
+commands are surfaced with a **warning** in the UI before the user runs them.
+
+Blocked patterns include:
+
+- recursive force deletes (`rm -rf`, `del /s`, `rmdir /s`, `Remove-Item -Recurse`)
+- destructive git (`git reset --hard`, `git clean -f`, force push)
+- disk/device destruction (`mkfs`, `format C:`, `dd of=`, `diskpart`)
+- credential/secret access (`.ssh/id_rsa`, `.aws/credentials`, `.env` exfiltration)
+- piping a remote download into a shell (`curl ... | sh`)
+- fork bombs
+
+Detection is best-effort and conservative; it favours flagging over silently
+running a destructive command. Normal scripts (`npm run lint/test/build`,
+`git status`) are never flagged.
 
 ## 2. Exposed Secrets in Logs
 
@@ -177,6 +198,7 @@ Before release, check:
 - [ ] file operations stay inside project root
 - [ ] terminal kill works
 - [ ] destructive actions require confirmation
+- [ ] clearly destructive quality commands are blocked before execution
 - [ ] logs redact common secrets
 - [ ] app does not auto-push
 - [ ] app does not silently run generated commands

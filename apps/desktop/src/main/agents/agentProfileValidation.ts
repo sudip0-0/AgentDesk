@@ -26,6 +26,10 @@ export const agentProfileDeleteSchema = z.object({
   id: z.string().uuid()
 });
 
+export const agentProfileTestSchema = z.object({
+  id: z.string().uuid()
+});
+
 export const parseAgentProfilePayload = <T>(
   schema: z.ZodType<T>,
   payload: unknown

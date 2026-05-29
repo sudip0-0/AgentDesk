@@ -153,7 +153,8 @@ export const getAgentRunDetail = async (
     finishedAt: run.finishedAt,
     exitCode: run.exitCode,
     durationMs: durationMs(run.startedAt, run.finishedAt),
-    notes: run.summary ?? run.errorMessage,
+    notes: run.summary ?? null,
+    errorMessage: run.errorMessage ?? null,
     task: task ? toTaskRecord(task) : null,
     agent: agent
       ? {

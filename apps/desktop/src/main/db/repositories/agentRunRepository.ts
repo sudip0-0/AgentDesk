@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDatabase } from "../client.js";
-import { agentRuns } from "../schema.js";
+import { agentRuns, tasks } from "../schema.js";
 
 export type AgentRunStatus = "running" | "completed" | "failed" | "killed";
 
@@ -39,7 +39,8 @@ export const startAgentRun = (input: StartAgentRunInput): string => {
 export const finishAgentRun = (
   runId: string,
   status: Exclude<AgentRunStatus, "running">,
-  exitCode?: number
+  exitCode?: number,
+  errorMessage?: string
 ): void => {
   const database = getDatabase();
 
@@ -48,10 +49,53 @@ export const finishAgentRun = (
     .set({
       status,
       finishedAt: new Date().toISOString(),
-      exitCode: exitCode ?? null
+      exitCode: exitCode ?? null,
+      ...(errorMessage ? { errorMessage } : {})
     })
     .where(eq(agentRuns.id, runId))
     .run();
+};
+
+/**
+ * Marks runs left in `running` state (for example after a crash or force quit)
+ * as failed, and resets their linked still-running tasks back to `ready` so the
+ * UI never shows a permanently stuck run. Returns the number of runs reconciled.
+ */
+export const reconcileInterruptedRuns = (): number => {
+  const database = getDatabase();
+  const stale = database
+    .select({ id: agentRuns.id, taskId: agentRuns.taskId })
+    .from(agentRuns)
+    .where(eq(agentRuns.status, "running"))
+    .all();
+
+  if (stale.length === 0) {
+    return 0;
+  }
+
+  const finishedAt = new Date().toISOString();
+
+  for (const run of stale) {
+    database
+      .update(agentRuns)
+      .set({
+        status: "failed",
+        finishedAt,
+        errorMessage: "Run was interrupted (app closed or crashed before the process exited)."
+      })
+      .where(eq(agentRuns.id, run.id))
+      .run();
+
+    if (run.taskId) {
+      database
+        .update(tasks)
+        .set({ status: "ready", updatedAt: finishedAt })
+        .where(and(eq(tasks.id, run.taskId), eq(tasks.status, "running")))
+        .run();
+    }
+  }
+
+  return stale.length;
 };
 
 export const getAgentRun = (runId: string) => {

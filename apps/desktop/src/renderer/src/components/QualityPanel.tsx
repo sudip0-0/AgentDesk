@@ -6,6 +6,7 @@ import type {
   QualityCommandRecord,
   QualityRunContext
 } from "../../../shared/qualityTypes";
+import { classifyCommand } from "../../../shared/commandSafety";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { QualityActionRequestType, UiActionRequest } from "../../../shared/uiActionTypes";
 import { Badge } from "./ui/Badge";
@@ -37,7 +38,14 @@ const emptyCommand = (projectId: string): QualityCommandInput => ({
 
 const summarizeRunResults = (results: QualityCheckRecord[]): string => {
   const requiredFailures = results.filter((result) => result.status === "failed").length;
+  const blocked = results.filter((result) => result.status === "blocked").length;
   const skippedOptional = results.filter((result) => result.status === "skipped").length;
+
+  if (blocked > 0) {
+    return `${blocked} command(s) blocked for safety${
+      requiredFailures > 0 ? `, ${requiredFailures} required check(s) failed.` : "."
+    }`;
+  }
 
   if (requiredFailures > 0) {
     return `${requiredFailures} required check(s) failed.`;
@@ -301,30 +309,47 @@ export function QualityPanel({
           {isRunning ? "Running..." : "Run All Checks"}
         </Button>
 
-        {commands.map((command) => (
-          <Card key={command.id}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <CardTitle>{command.label}</CardTitle>
-                <CardDescription className="break-all">{command.command}</CardDescription>
+        {commands.map((command) => {
+          const risk = classifyCommand(command.command);
+
+          return (
+            <Card key={command.id}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <CardTitle>{command.label}</CardTitle>
+                  <CardDescription className="break-all">{command.command}</CardDescription>
+                </div>
+                <Badge variant={command.required ? "warning" : "default"}>
+                  {command.required ? "Required" : "Optional"}
+                </Badge>
               </div>
-              <Badge variant={command.required ? "warning" : "default"}>
-                {command.required ? "Required" : "Optional"}
-              </Badge>
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              Timeout: {command.timeoutMs ? `${command.timeoutMs}ms` : "none"}
-            </p>
-            <div className="mt-3 flex gap-2">
-              <Button onClick={() => openEdit(command)} size="sm" variant="secondary">
-                Edit
-              </Button>
-              <Button onClick={() => setDeleteConfirmCommand(command)} size="sm" variant="danger">
-                Delete
-              </Button>
-            </div>
-          </Card>
-        ))}
+              <p className="mt-2 text-xs text-muted">
+                Timeout: {command.timeoutMs ? `${command.timeoutMs}ms` : "none"}
+              </p>
+              {risk.level !== "safe" ? (
+                <p
+                  className={cn(
+                    "mt-2 rounded-md border px-2 py-1 text-xs",
+                    risk.level === "block"
+                      ? "border-danger/45 bg-danger/10 text-[#ffd0d0]"
+                      : "border-accent-strong/45 bg-accent-strong/10 text-[#ffe0a3]"
+                  )}
+                >
+                  {risk.level === "block" ? "Blocked: " : "Warning: "}
+                  {risk.reasons.join(" ")}
+                </p>
+              ) : null}
+              <div className="mt-3 flex gap-2">
+                <Button onClick={() => openEdit(command)} size="sm" variant="secondary">
+                  Edit
+                </Button>
+                <Button onClick={() => setDeleteConfirmCommand(command)} size="sm" variant="danger">
+                  Delete
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       <section className="grid content-start gap-3">
@@ -369,16 +394,32 @@ export function QualityPanel({
         title="Run all quality checks?"
       >
         <ul className="grid gap-2 text-sm text-muted">
-          {commands.map((command) => (
-            <li className="rounded-md border border-border bg-[#0d1117] px-3 py-2" key={command.id}>
-              <span className="font-bold text-text">{command.label}</span>
-              <span className="mt-1 block break-all">{command.command}</span>
-              <span className="mt-1 block text-xs">
-                {command.required ? "Required" : "Optional"}
-                {command.timeoutMs ? ` · timeout ${command.timeoutMs}ms` : ""}
-              </span>
-            </li>
-          ))}
+          {commands.map((command) => {
+            const risk = classifyCommand(command.command);
+
+            return (
+              <li className="rounded-md border border-border bg-[#0d1117] px-3 py-2" key={command.id}>
+                <span className="font-bold text-text">{command.label}</span>
+                <span className="mt-1 block break-all">{command.command}</span>
+                <span className="mt-1 block text-xs">
+                  {command.required ? "Required" : "Optional"}
+                  {command.timeoutMs ? ` · timeout ${command.timeoutMs}ms` : ""}
+                </span>
+                {risk.level !== "safe" ? (
+                  <span
+                    className={cn(
+                      "mt-1 block text-xs font-bold",
+                      risk.level === "block" ? "text-[#ffd0d0]" : "text-[#ffe0a3]"
+                    )}
+                  >
+                    {risk.level === "block"
+                      ? "Will be blocked and not run for safety."
+                      : "Warning: review before running."}
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
         <div className="mt-4 flex justify-end gap-2 border-t border-border pt-4">
           <Button onClick={() => setRunConfirmOpen(false)} variant="ghost">

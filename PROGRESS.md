@@ -139,6 +139,28 @@ Created initial docs:
 
 None.
 
+## Recent Hardening (post-MVP)
+
+- Added a command safety layer (`shared/commandSafety.ts`) that blocks clearly
+  destructive quality commands before execution and warns on risky ones in the
+  Quality screen. Added a `blocked` quality-check status.
+- Added agent availability detection: the Agents screen shows Installed/Missing
+  status per profile (`shared/agentAvailability.ts` + main-process probe) and a
+  "Test Command" button that runs a `--version` probe with redacted output.
+- Reliability: interrupted runs left in `running` after a crash/force-quit are
+  reconciled to `failed` on startup (`reconcileInterruptedRuns`), and their
+  linked still-running tasks are reset to `ready`, so the UI never shows a
+  permanently stuck run.
+- Reliability: spawn failures now persist a run `errorMessage`, surfaced
+  prominently on the run detail screen instead of only being thrown to the
+  caller.
+- Reliability: the quality runner validates the project folder still exists and
+  is a directory before spawning, returning a clear error if the workspace was
+  moved or deleted.
+- Verified all quality gates on Windows (Node 22): typecheck, lint (0 warnings),
+  113 tests passing (30 files), and production build.
+- Added `docs/audit.md` with the full codebase audit.
+
 ## Next Tasks
 
 MVP feature phases are complete. Next work is portfolio packaging, manual demo rehearsal, and any follow-up hardening found during real CLI agent sessions.

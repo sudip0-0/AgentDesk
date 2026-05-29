@@ -30,6 +30,7 @@ export interface AgentRunDetail {
   exitCode: number | null;
   durationMs: number | null;
   notes: string | null;
+  errorMessage: string | null;
   task: TaskRecord | null;
   agent: Pick<AgentProfileRecord, "id" | "name" | "mode" | "command"> | null;
   transcript: string;

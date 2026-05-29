@@ -77,8 +77,19 @@ Added a command-safety layer (vision module #8 / Phase 8):
 - `QualityPanel.tsx` — warns on dangerous commands in the editor, the command
   list, and the run-confirmation dialog; renders the new `blocked` status.
 
-Default seeded commands (`npm run lint/typecheck/test/build`) are not flagged, so
-existing behavior is unchanged.
+Added agent availability detection + test command (Agents requirements):
+
+- `shared/agentAvailability.ts` — pure PATH/PATHEXT candidate builder, unit tested.
+- `main/agents/agentAvailabilityRunner.ts` — resolves installed/missing per
+  profile via the filesystem and runs a `--version` probe (no shell) to test a
+  command, with redacted output.
+- New IPC `agent-profile:availability` and `agent-profile:test`, exposed through
+  the preload bridge.
+- `AgentProfilesPanel.tsx` — Installed/Missing badge per profile, "Refresh
+  Status", and a "Test Command" button with result output.
+
+Default seeded quality commands (`npm run lint/typecheck/test/build`) are not
+flagged, so existing behavior is unchanged.
 
 ## 7. Recommended next tasks
 
@@ -86,4 +97,5 @@ existing behavior is unchanged.
    a profile whose templated args resolve to a destructive command).
 2. Add an explicit per-project "allow this command" override for blocked quality
    commands (audited), so power users are not hard-blocked.
-3. Consider OS-keychain storage if agent profile env ever needs real secrets.
+3. Auto-refresh agent availability on a timer or on window focus.
+4. Consider OS-keychain storage if agent profile env ever needs real secrets.

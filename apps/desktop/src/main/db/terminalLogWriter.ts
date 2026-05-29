@@ -63,11 +63,12 @@ export class TerminalLogWriter {
     terminalSessionId: string,
     agentRunId: string,
     status: "completed" | "failed" | "killed",
-    exitCode?: number
+    exitCode?: number,
+    errorMessage?: string
   ): void {
     this.flushBuffer(terminalSessionId);
     this.buffers.delete(terminalSessionId);
-    finishAgentRun(agentRunId, status, exitCode);
+    finishAgentRun(agentRunId, status, exitCode, errorMessage);
   }
 
   public flushAll(): void {

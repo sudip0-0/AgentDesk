@@ -7,10 +7,12 @@ import { setDatabasePathForTests } from "../paths.js";
 import { openProjectFromPath } from "./projectRepository.js";
 import {
   assertRunBelongsToProject,
+  finishAgentRun,
   getAgentRun,
+  reconcileInterruptedRuns,
   startAgentRun
 } from "./agentRunRepository.js";
-import { createTask } from "./taskRepository.js";
+import { createTask, getTaskById, setTaskStatus } from "./taskRepository.js";
 
 const resetDatabase = (): void => {
   closeDatabase();
@@ -83,5 +85,82 @@ describe("agentRunRepository", () => {
     expect(() => assertRunBelongsToProject(runId, otherProject.id)).toThrow(
       /not found for this project/i
     );
+  });
+
+  it("records an error message when a run is finished as failed", () => {
+    const projectDirectory = join(databaseDirectory, "repo");
+    mkdirSync(projectDirectory, { recursive: true });
+    const { project } = openProjectFromPath(projectDirectory);
+
+    const runId = startAgentRun({
+      projectId: project.id,
+      terminalSessionId: "session-fail",
+      command: "missing-agent",
+      cwd: projectDirectory
+    });
+
+    finishAgentRun(runId, "failed", undefined, "Failed to start: command not found.");
+
+    const run = getAgentRun(runId);
+    expect(run?.status).toBe("failed");
+    expect(run?.errorMessage).toMatch(/command not found/i);
+  });
+
+  it("reconciles interrupted running runs and resets their linked tasks", () => {
+    const projectDirectory = join(databaseDirectory, "repo");
+    mkdirSync(projectDirectory, { recursive: true });
+    const { project } = openProjectFromPath(projectDirectory);
+
+    const task = createTask({
+      projectId: project.id,
+      title: "Interrupted task",
+      description: "",
+      status: "ready",
+      priority: "medium",
+      goal: "",
+      context: "",
+      acceptanceCriteria: "",
+      filesLikelyAffected: "",
+      qualityCommands: "",
+      securityNotes: "",
+      doneDefinition: "",
+      dependsOn: ""
+    });
+
+    const runId = startAgentRun({
+      projectId: project.id,
+      terminalSessionId: "session-interrupted",
+      command: "powershell.exe",
+      cwd: projectDirectory,
+      taskId: task.id
+    });
+    setTaskStatus({ projectId: project.id, id: task.id, status: "running" });
+
+    const reconciled = reconcileInterruptedRuns();
+    expect(reconciled).toBe(1);
+
+    const run = getAgentRun(runId);
+    expect(run?.status).toBe("failed");
+    expect(run?.errorMessage).toMatch(/interrupted/i);
+    expect(run?.finishedAt).toBeTruthy();
+
+    expect(getTaskById(task.id)?.status).toBe("ready");
+  });
+
+  it("does nothing when there are no interrupted runs", () => {
+    const projectDirectory = join(databaseDirectory, "repo");
+    mkdirSync(projectDirectory, { recursive: true });
+    const { project } = openProjectFromPath(projectDirectory);
+
+    const runId = startAgentRun({
+      projectId: project.id,
+      terminalSessionId: "session-done",
+      command: "powershell.exe",
+      cwd: projectDirectory
+    });
+    finishAgentRun(runId, "completed", 0);
+
+    expect(reconcileInterruptedRuns()).toBe(0);
+    expect(getAgentRun(runId)?.status).toBe("completed");
   });
 });

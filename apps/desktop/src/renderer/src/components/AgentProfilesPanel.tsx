@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AgentProfileInput, AgentProfileRecord } from "../../../shared/agentProfileTypes";
 import {
   agentProfileModes,
   agentPromptDeliveries,
   agentWorkingDirectoryBehaviors
 } from "../../../shared/agentProfileTypes";
+import type { AgentAvailability, AgentCommandTestResult } from "../../../shared/agentAvailability";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
@@ -41,6 +42,9 @@ const workingDirectoryLabels = {
 
 export function AgentProfilesPanel(): React.JSX.Element {
   const [profiles, setProfiles] = useState<AgentProfileRecord[]>([]);
+  const [availability, setAvailability] = useState<Record<string, AgentAvailability>>({});
+  const [testResult, setTestResult] = useState<AgentCommandTestResult | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [draft, setDraft] = useState<AgentProfileInput | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -52,7 +56,18 @@ export function AgentProfilesPanel(): React.JSX.Element {
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? null;
   const deleteProfile = profiles.find((profile) => profile.id === deleteId) ?? null;
 
-  const loadProfiles = async (): Promise<void> => {
+  const loadAvailability = useCallback(async (): Promise<void> => {
+    try {
+      const entries: AgentAvailability[] = await window.agentdesk.agentProfiles.listAvailability();
+      setAvailability(
+        Object.fromEntries(entries.map((entry) => [entry.profileId, entry]))
+      );
+    } catch {
+      // Availability is best-effort; ignore probe failures so the panel still loads.
+    }
+  }, []);
+
+  const loadProfiles = useCallback(async (): Promise<void> => {
     setError(null);
 
     try {
@@ -63,14 +78,40 @@ export function AgentProfilesPanel(): React.JSX.Element {
           ? current
           : loadedProfiles[0]?.id ?? null
       );
+      await loadAvailability();
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load agent profiles.");
     }
-  };
+  }, [loadAvailability]);
 
   useEffect(() => {
     void loadProfiles();
-  }, []);
+  }, [loadProfiles]);
+
+  const runCommandTest = async (profile: AgentProfileRecord): Promise<void> => {
+    setTestingId(profile.id);
+    setTestResult(null);
+    setError(null);
+
+    try {
+      const result = await window.agentdesk.agentProfiles.test({ id: profile.id });
+      setTestResult(result);
+      setAvailability((current) => ({
+        ...current,
+        [profile.id]: {
+          profileId: profile.id,
+          command: result.command,
+          installed: result.installed,
+          resolvedPath: current[profile.id]?.resolvedPath ?? null,
+          message: result.message
+        }
+      }));
+    } catch (testError) {
+      setError(testError instanceof Error ? testError.message : "Failed to test agent command.");
+    } finally {
+      setTestingId(null);
+    }
+  };
 
   const openCreate = (): void => {
     setEditingId(null);
@@ -142,9 +183,14 @@ export function AgentProfilesPanel(): React.JSX.Element {
       <div className="grid content-start gap-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Agent Profiles</h2>
-          <Button onClick={openCreate} variant="primary">
-            New Profile
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => void loadAvailability()} size="sm" variant="secondary">
+              Refresh Status
+            </Button>
+            <Button onClick={openCreate} variant="primary">
+              New Profile
+            </Button>
+          </div>
         </div>
 
         {message ? (
@@ -166,26 +212,39 @@ export function AgentProfilesPanel(): React.JSX.Element {
           </Card>
         ) : null}
 
-        {profiles.map((profile) => (
-          <button
-            className={cn(
-              "rounded-lg border bg-panel p-3 text-left transition hover:bg-panel-strong",
-              profile.id === selectedProfile?.id ? "border-accent/60" : "border-border"
-            )}
-            key={profile.id}
-            onClick={() => setSelectedProfileId(profile.id)}
-            type="button"
-          >
-            <span className="block text-sm font-bold text-text">{profile.name}</span>
-            <span className="mt-1 block truncate text-xs text-muted">{profile.command}</span>
-          </button>
-        ))}
+        {profiles.map((profile) => {
+          const status = availability[profile.id];
+
+          return (
+            <button
+              className={cn(
+                "rounded-lg border bg-panel p-3 text-left transition hover:bg-panel-strong",
+                profile.id === selectedProfile?.id ? "border-accent/60" : "border-border"
+              )}
+              key={profile.id}
+              onClick={() => setSelectedProfileId(profile.id)}
+              type="button"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="block text-sm font-bold text-text">{profile.name}</span>
+                <Badge variant={status ? (status.installed ? "success" : "danger") : "default"}>
+                  {status ? (status.installed ? "Installed" : "Missing") : "Unknown"}
+                </Badge>
+              </div>
+              <span className="mt-1 block truncate text-xs text-muted">{profile.command}</span>
+            </button>
+          );
+        })}
       </div>
 
       <AgentProfileDetail
+        availability={selectedProfile ? availability[selectedProfile.id] ?? null : null}
+        isTesting={testingId === selectedProfile?.id}
         onDelete={(profile) => setDeleteId(profile.id)}
         onEdit={openEdit}
+        onTest={(profile) => void runCommandTest(profile)}
         profile={selectedProfile}
+        testResult={testResult && testResult.profileId === selectedProfile?.id ? testResult : null}
       />
 
       <AgentProfileDialog
@@ -218,12 +277,20 @@ export function AgentProfilesPanel(): React.JSX.Element {
 
 function AgentProfileDetail({
   profile,
+  availability,
+  testResult,
+  isTesting,
   onEdit,
-  onDelete
+  onDelete,
+  onTest
 }: {
   profile: AgentProfileRecord | null;
+  availability: AgentAvailability | null;
+  testResult: AgentCommandTestResult | null;
+  isTesting: boolean;
   onEdit: (profile: AgentProfileRecord) => void;
   onDelete: (profile: AgentProfileRecord) => void;
+  onTest: (profile: AgentProfileRecord) => void;
 }): React.JSX.Element {
   if (!profile) {
     return (
@@ -242,9 +309,22 @@ function AgentProfileDetail({
             <CardTitle>{profile.name}</CardTitle>
             <CardDescription>{profile.command}</CardDescription>
           </div>
-          <Badge>{modeLabels[profile.mode]}</Badge>
+          <div className="flex items-center gap-2">
+            {availability ? (
+              <Badge variant={availability.installed ? "success" : "danger"}>
+                {availability.installed ? "Installed" : "Missing"}
+              </Badge>
+            ) : null}
+            <Badge>{modeLabels[profile.mode]}</Badge>
+          </div>
         </div>
+        {availability ? (
+          <p className="mt-2 text-xs text-muted">{availability.message}</p>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
+          <Button disabled={isTesting} onClick={() => onTest(profile)} variant="secondary">
+            {isTesting ? "Testing..." : "Test Command"}
+          </Button>
           <Button onClick={() => onEdit(profile)} variant="primary">
             Edit
           </Button>
@@ -252,6 +332,23 @@ function AgentProfileDetail({
             Delete
           </Button>
         </div>
+        {testResult ? (
+          <div
+            className={cn(
+              "mt-3 rounded-md border px-3 py-2 text-xs",
+              testResult.installed && testResult.exitCode === 0
+                ? "border-accent/40 bg-accent/10 text-[#bfe9e3]"
+                : "border-danger/45 bg-danger/10 text-[#ffd0d0]"
+            )}
+          >
+            <p className="font-bold">{testResult.message}</p>
+            {testResult.output ? (
+              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                {testResult.output}
+              </pre>
+            ) : null}
+          </div>
+        ) : null}
       </Card>
 
       <section className="grid gap-3 md:grid-cols-2">

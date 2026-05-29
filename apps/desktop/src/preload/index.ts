@@ -6,6 +6,7 @@ import type {
   AgentProfileRecord,
   AgentProfileUpdateInput
 } from "../shared/agentProfileTypes.js";
+import type { AgentAvailability, AgentCommandTestResult } from "../shared/agentAvailability.js";
 import type {
   CreateTerminalRequest,
   CreateTerminalResult,
@@ -121,7 +122,11 @@ const agentdeskApi: AgentDeskApi = {
     update: (input: AgentProfileUpdateInput): Promise<AgentProfileRecord> =>
       ipcRenderer.invoke("agent-profile:update", input) as Promise<AgentProfileRecord>,
     delete: (input: AgentProfileDeleteInput): Promise<void> =>
-      ipcRenderer.invoke("agent-profile:delete", input) as Promise<void>
+      ipcRenderer.invoke("agent-profile:delete", input) as Promise<void>,
+    listAvailability: (): Promise<AgentAvailability[]> =>
+      ipcRenderer.invoke("agent-profile:availability") as Promise<AgentAvailability[]>,
+    test: (input: AgentProfileDeleteInput): Promise<AgentCommandTestResult> =>
+      ipcRenderer.invoke("agent-profile:test", input) as Promise<AgentCommandTestResult>
   },
   runs: {
     list: (projectId: string): Promise<AgentRunListItem[]> =>

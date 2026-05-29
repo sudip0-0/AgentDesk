@@ -62,6 +62,11 @@ The app may not always know if an agent is done, waiting, or stuck.
 Current behavior:
 AgentDesk uses heuristic waiting-for-input detection on recent terminal output (y/n prompts, Enter to continue, colon/question prompts). Detection resets to busy after user input. False positives and false negatives are still possible across different CLIs.
 
+Runs left in `running` after a crash or force quit are reconciled to `failed` on
+the next launch (`reconcileInterruptedRuns`), and their linked still-running
+tasks are reset to `ready`. There is no live watchdog for a process that hangs
+while the app stays open; use the Cancel/Kill button for that case.
+
 Impact:
 Task status may need manual correction.
 
@@ -87,16 +92,21 @@ Chunk logs, lazy-load transcripts, allow log deletion and export.
 
 ## 5. Unsafe Commands
 
-Status: important
+Status: mitigated (command safety layer)
 
 Problem:
-Agents may suggest or execute dangerous commands.
+Agents or users may run destructive commands.
 
 Impact:
 Data loss or project damage.
 
 Mitigation:
-Show commands, provide kill button, ask confirmation for app-managed destructive actions.
+Show commands, provide kill button, ask confirmation for app-managed destructive
+actions. App-run quality commands now pass through `shared/commandSafety.ts`,
+which blocks clearly destructive patterns (recursive force deletes, `git reset
+--hard`, `git clean -f`, force push, disk format, `dd of=`, credential reads,
+`curl | sh`, fork bombs) and warns on riskier commands in the UI before running.
+Detection is best-effort, not a sandbox.
 
 ---
 
@@ -171,7 +181,11 @@ Impact:
 Launch fails.
 
 Mitigation:
-Add "Test Command" button for every agent profile.
+Add "Test Command" button for every agent profile. **Done:** the Agents screen
+shows an Installed/Missing badge per profile (PATH resolution via
+`shared/agentAvailability.ts`) and a "Test Command" button that runs a
+`--version` probe and reports the result. A "Refresh Status" action re-probes all
+profiles.
 Terminal launch now surfaces spawn failures with PATH hints when the executable is missing.
 Do not store secrets in profile environment variables.
 

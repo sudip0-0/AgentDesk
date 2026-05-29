@@ -34,6 +34,18 @@ const statusVariant = (status: string): "default" | "success" | "warning" | "dan
   return "default";
 };
 
+const qualityStatusVariant = (status: string): "default" | "success" | "warning" | "danger" => {
+  if (status === "passed") {
+    return "success";
+  }
+
+  if (status === "skipped") {
+    return "warning";
+  }
+
+  return "danger";
+};
+
 export function RunDetailPanel({
   project,
   initialRunId
@@ -199,6 +211,12 @@ function RunDetail({ detail }: { detail: AgentRunDetail | null }): React.JSX.Ele
           </div>
           <Badge variant={statusVariant(detail.status)}>{detail.status}</Badge>
         </div>
+        {detail.errorMessage ? (
+          <div className="mt-3 rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
+            <span className="font-bold">Error: </span>
+            {detail.errorMessage}
+          </div>
+        ) : null}
         <div className="mt-3 grid gap-1 text-xs text-muted">
           <span>Agent: {detail.agent?.name ?? "none"}</span>
           <span>Task: {detail.task?.title ?? "none"}</span>
@@ -255,7 +273,7 @@ function RunDetail({ detail }: { detail: AgentRunDetail | null }): React.JSX.Ele
                 <div className="rounded-md border border-border bg-[#10161d] px-3 py-2" key={check.id}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-bold text-text">{check.label}</span>
-                    <Badge variant={check.status === "passed" ? "success" : "danger"}>{check.status}</Badge>
+                    <Badge variant={qualityStatusVariant(check.status)}>{check.status}</Badge>
                   </div>
                   <span className="mt-1 block truncate text-xs text-muted">{check.command}</span>
                 </div>

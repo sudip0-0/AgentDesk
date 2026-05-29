@@ -152,7 +152,14 @@ export class TerminalSessionManager {
         }
       });
     } catch (spawnError) {
-      this.logWriter.endSession(id, agentRunId, "failed");
+      const reason = spawnError instanceof Error ? spawnError.message : "Unknown error";
+      const hint =
+        profile && /enoent|not found|cannot find/i.test(reason)
+          ? ` Check that "${profile.command}" is installed and on your PATH.`
+          : "";
+      const failureMessage = `Failed to start terminal for "${displayCommand}".${hint} (${reason})`;
+
+      this.logWriter.endSession(id, agentRunId, "failed", undefined, failureMessage);
 
       if (linkedTask) {
         setTaskStatus({
@@ -162,13 +169,7 @@ export class TerminalSessionManager {
         });
       }
 
-      const reason = spawnError instanceof Error ? spawnError.message : "Unknown error";
-      const hint =
-        profile && /enoent|not found|cannot find/i.test(reason)
-          ? ` Check that "${profile.command}" is installed and on your PATH.`
-          : "";
-
-      throw new Error(`Failed to start terminal for "${displayCommand}".${hint} (${reason})`);
+      throw new Error(failureMessage);
     }
 
     this.sessions.set(id, {
