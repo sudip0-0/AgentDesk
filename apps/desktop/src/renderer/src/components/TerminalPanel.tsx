@@ -267,10 +267,12 @@ interface TerminalPanelProps {
   launchRequest: TaskTerminalLaunch | null;
   promptSendRequest: PromptSendRequest | null;
   actionRequest?: UiActionRequest<TerminalActionRequestType> | null;
+  isVisible?: boolean;
   onLaunchHandled: () => void;
   onPromptSendHandled: () => void;
   onActionHandled?: () => void;
   onRunQualityChecks: (context: QualityRunContext) => void;
+  onRunningCountChange?: (count: number) => void;
   onTaskStatusChanged: () => void;
 }
 
@@ -279,10 +281,12 @@ export function TerminalPanel({
   launchRequest,
   promptSendRequest,
   actionRequest,
+  isVisible = true,
   onLaunchHandled,
   onPromptSendHandled,
   onActionHandled,
   onRunQualityChecks,
+  onRunningCountChange,
   onTaskStatusChanged
 }: TerminalPanelProps): React.JSX.Element {
   const initialState = useRef<{ tabs: TerminalTab[]; activeId: string } | null>(null);
@@ -305,6 +309,21 @@ export function TerminalPanel({
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
+
+  // Report the number of live (running) sessions to the parent for the global indicator.
+  useEffect(() => {
+    const runningCount = tabs.filter((tab) => tab.sessionId !== null).length;
+    onRunningCountChange?.(runningCount);
+  }, [onRunningCountChange, tabs]);
+
+  // Refit the active terminal when the panel becomes visible again after being hidden.
+  useEffect(() => {
+    if (isVisible) {
+      requestAnimationFrame(() => {
+        paneRefs.current.get(activeTabIdRef.current)?.fit();
+      });
+    }
+  }, [isVisible]);
 
   const updateTab = useCallback((tabId: string, patch: Partial<TerminalTab>): void => {
     setTabs((current) => current.map((tab) => (tab.id === tabId ? { ...tab, ...patch } : tab)));

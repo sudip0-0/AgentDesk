@@ -11,6 +11,7 @@ import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { Dialog } from "./ui/Dialog";
 import { EmptyState } from "./ui/EmptyState";
+import { Markdown } from "./ui/Markdown";
 import { PageHeader } from "./ui/PageHeader";
 import { cn } from "../lib/cn";
 
@@ -265,6 +266,8 @@ export function DocumentsPanel({
 }
 
 function DocumentPreview({ file }: { file: DocumentPreviewFile | null }): React.JSX.Element {
+  const [view, setView] = useState<"rendered" | "raw">("rendered");
+
   if (!file) {
     return (
       <EmptyState
@@ -281,11 +284,26 @@ function DocumentPreview({ file }: { file: DocumentPreviewFile | null }): React.
           <CardTitle>{file.name}</CardTitle>
           <CardDescription className="break-all">{file.path}</CardDescription>
         </div>
-        <Badge variant={file.exists ? "warning" : "success"}>{file.exists ? "Will overwrite" : "Will create"}</Badge>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setView("rendered")} size="sm" variant={view === "rendered" ? "secondary" : "ghost"}>
+            Rendered
+          </Button>
+          <Button onClick={() => setView("raw")} size="sm" variant={view === "raw" ? "secondary" : "ghost"}>
+            Raw
+          </Button>
+          <Badge variant={file.exists ? "warning" : "success"}>{file.exists ? "Will overwrite" : "Will create"}</Badge>
+        </div>
       </div>
-      <pre className="mt-3 max-h-[660px] overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
-        {file.content}
-      </pre>
+      {view === "rendered" ? (
+        <Markdown
+          className="mt-3 max-h-[660px] overflow-auto rounded-md border border-border bg-[#0d1117] p-4"
+          content={file.content}
+        />
+      ) : (
+        <pre className="mt-3 max-h-[660px] overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+          {file.content}
+        </pre>
+      )}
     </Card>
   );
 }

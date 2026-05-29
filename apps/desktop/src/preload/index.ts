@@ -43,7 +43,7 @@ import type {
   AgentRunListItem
 } from "../shared/runDetailTypes.js";
 import type { ListReviewsInput, ReviewRecord, SaveReviewInput } from "../shared/reviewTypes.js";
-import type { AppSettings, AppSettingsUpdate } from "../shared/settingsTypes.js";
+import type { AppSettings, AppSettingsUpdate, UiPreferences, UiPreferencesUpdate } from "../shared/settingsTypes.js";
 import type {
   GitCommitInput,
   GitCommitResult,
@@ -205,7 +205,11 @@ const agentdeskApi: AgentDeskApi = {
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke("settings:get") as Promise<AppSettings>,
     update: (input: AppSettingsUpdate): Promise<AppSettings> =>
-      ipcRenderer.invoke("settings:update", input) as Promise<AppSettings>
+      ipcRenderer.invoke("settings:update", input) as Promise<AppSettings>,
+    getUi: (): Promise<UiPreferences> =>
+      ipcRenderer.invoke("settings:get-ui") as Promise<UiPreferences>,
+    updateUi: (input: UiPreferencesUpdate): Promise<UiPreferences> =>
+      ipcRenderer.invoke("settings:update-ui", input) as Promise<UiPreferences>
   }
 };
 

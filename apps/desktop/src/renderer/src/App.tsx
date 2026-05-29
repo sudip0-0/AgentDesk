@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgentProfileRecord } from "../../shared/agentProfileTypes";
 import type { DatabaseHealth } from "../../shared/dbTypes";
-import type { PromptSendRequest } from "../../shared/promptSendTypes";
+import type { UiPreferences } from "../../shared/settingsTypes";import type { PromptSendRequest } from "../../shared/promptSendTypes";
 import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../shared/projectTypes";
 import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
 import type { TaskRecord } from "../../shared/taskTypes";
@@ -65,6 +65,7 @@ export function App(): React.JSX.Element {
   const [documentRequest, setDocumentRequest] = useState<DocumentPanelRequest | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [runningAgentCount, setRunningAgentCount] = useState(0);
   const [taskActionRequest, setTaskActionRequest] = useState<UiActionRequest<TaskActionRequestType> | null>(
     null
   );
@@ -183,6 +184,41 @@ export function App(): React.JSX.Element {
     setProjectMessage(result.duplicate ? "Project already exists; refreshed metadata." : "Project added.");
     setProjectError(null);
   };
+
+  // Load persisted UI preferences (sidebar + last screen) once on mount.
+  const prefsLoadedRef = useRef(false);
+  useEffect(() => {
+    void window.agentdesk.settings
+      .getUi()
+      .then((prefs: UiPreferences) => {
+        setSidebarCollapsed(prefs.sidebarCollapsed);
+        setActiveNav(prefs.lastActiveScreen);
+      })
+      .catch(() => {
+        // Preferences are best-effort; fall back to defaults.
+      })
+      .finally(() => {
+        prefsLoadedRef.current = true;
+      });
+  }, []);
+
+  // Persist the active screen when it changes (after the initial load).
+  useEffect(() => {
+    if (!prefsLoadedRef.current) {
+      return;
+    }
+
+    void window.agentdesk.settings.updateUi({ lastActiveScreen: activeNav }).catch(() => undefined);
+  }, [activeNav]);
+
+  // Persist the sidebar collapsed state when it changes (after the initial load).
+  useEffect(() => {
+    if (!prefsLoadedRef.current) {
+      return;
+    }
+
+    void window.agentdesk.settings.updateUi({ sidebarCollapsed }).catch(() => undefined);
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     void window.agentdesk.db.getHealth().then(setDbHealth).catch(() => {
@@ -317,6 +353,12 @@ export function App(): React.JSX.Element {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {runningAgentCount > 0 ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-[#bfe9e3]">
+                <span className="size-1.5 animate-pulse rounded-full bg-accent" aria-hidden />
+                {runningAgentCount} running
+              </span>
+            ) : null}
             {activeProject?.metadata.isGitRepo && activeProject.metadata.currentBranch ? (
               <Badge>{activeProject.metadata.currentBranch}</Badge>
             ) : null}
@@ -429,9 +471,10 @@ export function App(): React.JSX.Element {
             </section>
           ) : null}
 
-          {activeNav === "terminal" ? (
+          <div className={activeNav === "terminal" ? "" : "hidden"}>
             <TerminalPanel
               actionRequest={terminalActionRequest}
+              isVisible={activeNav === "terminal"}
               launchRequest={terminalLaunch}
               onActionHandled={() => setTerminalActionRequest(null)}
               onLaunchHandled={() => setTerminalLaunch(null)}
@@ -440,11 +483,12 @@ export function App(): React.JSX.Element {
                 setQualityRunContext(context);
                 setActiveNav("quality");
               }}
+              onRunningCountChange={setRunningAgentCount}
               onTaskStatusChanged={refreshOverview}
               promptSendRequest={promptSendRequest}
               project={activeProject}
             />
-          ) : null}
+          </div>
 
           {activeNav === "tasks" ? (
             <TaskBoard

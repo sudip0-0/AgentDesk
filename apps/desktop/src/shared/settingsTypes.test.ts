@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_APP_SETTINGS,
+  DEFAULT_UI_PREFERENCES,
   IDLE_WARNING_SECONDS_MAX,
   IDLE_WARNING_SECONDS_MIN,
-  normalizeAppSettings
+  normalizeAppSettings,
+  normalizeUiPreferences
 } from "./settingsTypes.js";
 
 describe("normalizeAppSettings", () => {
@@ -38,5 +40,24 @@ describe("normalizeAppSettings", () => {
       confirmDestructiveGit: undefined
     });
     expect(typeof next.confirmDestructiveGit).toBe("boolean");
+  });
+});
+
+describe("normalizeUiPreferences", () => {
+  it("keeps a known screen id", () => {
+    const next = normalizeUiPreferences(DEFAULT_UI_PREFERENCES, { lastActiveScreen: "git" });
+    expect(next.lastActiveScreen).toBe("git");
+  });
+
+  it("falls back to the default screen for an unknown id", () => {
+    const next = normalizeUiPreferences(DEFAULT_UI_PREFERENCES, {
+      lastActiveScreen: "not-a-real-screen"
+    });
+    expect(next.lastActiveScreen).toBe(DEFAULT_UI_PREFERENCES.lastActiveScreen);
+  });
+
+  it("coerces the sidebar flag to a boolean", () => {
+    const next = normalizeUiPreferences(DEFAULT_UI_PREFERENCES, { sidebarCollapsed: true });
+    expect(next.sidebarCollapsed).toBe(true);
   });
 });

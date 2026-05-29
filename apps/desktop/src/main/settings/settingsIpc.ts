@@ -2,9 +2,15 @@ import { ipcMain } from "electron";
 import { z } from "zod";
 import {
   IDLE_WARNING_SECONDS_MAX,
-  IDLE_WARNING_SECONDS_MIN
+  IDLE_WARNING_SECONDS_MIN,
+  UI_SCREEN_IDS
 } from "../../shared/settingsTypes.js";
-import { getAppSettings, updateAppSettings } from "../db/repositories/settingsRepository.js";
+import {
+  getAppSettings,
+  getUiPreferences,
+  updateAppSettings,
+  updateUiPreferences
+} from "../db/repositories/settingsRepository.js";
 
 const settingsUpdateSchema = z
   .object({
@@ -20,6 +26,13 @@ const settingsUpdateSchema = z
   })
   .strict();
 
+const uiPreferencesUpdateSchema = z
+  .object({
+    sidebarCollapsed: z.boolean().optional(),
+    lastActiveScreen: z.enum(UI_SCREEN_IDS).optional()
+  })
+  .strict();
+
 export const registerSettingsIpc = (): void => {
   ipcMain.handle("settings:get", () => getAppSettings());
 
@@ -31,5 +44,17 @@ export const registerSettingsIpc = (): void => {
     }
 
     return updateAppSettings(result.data);
+  });
+
+  ipcMain.handle("settings:get-ui", () => getUiPreferences());
+
+  ipcMain.handle("settings:update-ui", (_event, payload: unknown) => {
+    const result = uiPreferencesUpdateSchema.safeParse(payload);
+
+    if (!result.success) {
+      throw new Error(result.error.issues[0]?.message ?? "Invalid UI preferences update.");
+    }
+
+    return updateUiPreferences(result.data);
   });
 };

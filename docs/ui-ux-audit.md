@@ -61,10 +61,24 @@ panel).
 
 ## Remaining UI gaps (recommended next)
 
-- A polished narrow/tablet table→card reflow (the sidebar now collapses and the
-  min-width was relaxed, but some two-column panels still assume width).
-- Real markdown rendering in the Docs preview (currently raw text).
-- Inline syntax highlighting inside diff lines (line-level coloring is done).
+- Live markdown rendering currently supports the common subset (headings, lists,
+  code, quotes, inline emphasis); tables and nested lists are not yet handled.
+- Diff coloring is per-line, not intra-line token highlighting.
+
+## Third UI pass (gaps closed)
+
+- Markdown preview: added a dependency-free `Markdown` renderer (no
+  `dangerouslySetInnerHTML`) with a Rendered/Raw toggle in the Docs preview.
+- Persistence: sidebar-collapsed state and the last active screen are stored in
+  `app_settings` (UI preferences key) via `settings:get-ui`/`settings:update-ui`
+  and restored on launch.
+- Always-mounted terminal: the terminal panel is kept mounted and hidden when
+  inactive, so navigating between screens no longer kills running agents. It
+  refits when shown again.
+- Running-agent indicator: the top bar shows a live "N running" pill driven by
+  the terminal panel's active session count.
+- Responsive: relaxed body min-width to 560px; two-column panels already stack
+  below the `xl` breakpoint.
 
 ## Second UI pass (gaps closed)
 

@@ -29,6 +29,47 @@ export const IDLE_WARNING_SECONDS_MAX = 3_600;
 
 export type AppSettingsUpdate = Partial<AppSettings>;
 
+/** Persisted renderer UI preferences (separate from safety settings). */
+export interface UiPreferences {
+  sidebarCollapsed: boolean;
+  lastActiveScreen: string;
+}
+
+export const UI_SCREEN_IDS = [
+  "dashboard",
+  "projects",
+  "terminal",
+  "tasks",
+  "agents",
+  "quality",
+  "git",
+  "documents",
+  "runs",
+  "settings"
+] as const;
+
+export const DEFAULT_UI_PREFERENCES: UiPreferences = {
+  sidebarCollapsed: false,
+  lastActiveScreen: "dashboard"
+};
+
+export type UiPreferencesUpdate = Partial<UiPreferences>;
+
+export const normalizeUiPreferences = (
+  current: UiPreferences,
+  patch: UiPreferencesUpdate
+): UiPreferences => {
+  const next: UiPreferences = { ...current, ...patch };
+  const screen = UI_SCREEN_IDS.includes(next.lastActiveScreen as (typeof UI_SCREEN_IDS)[number])
+    ? next.lastActiveScreen
+    : DEFAULT_UI_PREFERENCES.lastActiveScreen;
+
+  return {
+    sidebarCollapsed: Boolean(next.sidebarCollapsed),
+    lastActiveScreen: screen
+  };
+};
+
 /** Clamps and normalizes a partial settings patch against the allowed ranges. */
 export const normalizeAppSettings = (
   current: AppSettings,

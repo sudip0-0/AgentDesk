@@ -30,7 +30,7 @@ import type {
   AgentRunListItem
 } from "./runDetailTypes.js";
 import type { ListReviewsInput, ReviewRecord, SaveReviewInput } from "./reviewTypes.js";
-import type { AppSettings, AppSettingsUpdate } from "./settingsTypes.js";
+import type { AppSettings, AppSettingsUpdate, UiPreferences, UiPreferencesUpdate } from "./settingsTypes.js";
 import type {
   GitCommitInput,
   GitCommitResult,
@@ -138,5 +138,7 @@ export interface AgentDeskApi {
   settings: {
     get: () => Promise<AppSettings>;
     update: (input: AppSettingsUpdate) => Promise<AppSettings>;
+    getUi: () => Promise<UiPreferences>;
+    updateUi: (input: UiPreferencesUpdate) => Promise<UiPreferences>;
   };
 }

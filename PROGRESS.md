@@ -180,8 +180,13 @@ None.
   `MetricCard`, and colored `DiffView` primitives; the Git panel now renders
   colored diffs with a loading skeleton; added a collapsible sidebar and relaxed
   the body min-width to 720px for narrower windows.
+- UI/UX pass 3: added a dependency-free `Markdown` renderer (Rendered/Raw toggle
+  in Docs); persisted sidebar-collapsed and last-active-screen in `app_settings`
+  (restored on launch); kept the terminal panel always mounted so navigating
+  screens no longer kills running agents; added a live "N running" agent
+  indicator in the top bar; relaxed the body min-width to 560px.
 - Verified all quality gates on Windows (Node 22): typecheck, lint (0 warnings),
-  131 tests passing (33 files), and production build.
+  134 tests passing (33 files), and production build.
 - Added `docs/audit.md` with the full codebase audit.
 
 ## Next Tasks
