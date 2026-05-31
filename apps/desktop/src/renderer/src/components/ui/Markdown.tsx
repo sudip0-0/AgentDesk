@@ -29,7 +29,7 @@ const renderInline = (text: string): ReactNode[] => {
 
     if (token.startsWith("`")) {
       nodes.push(
-        <code className="rounded bg-panel-strong px-1 py-0.5 font-mono text-[0.85em] text-[#bfe9e3]" key={inlineKey}>
+        <code className="rounded bg-panel-strong px-1 py-0.5 font-mono text-[0.85em] text-accent-soft" key={inlineKey}>
           {token.slice(1, -1)}
         </code>
       );

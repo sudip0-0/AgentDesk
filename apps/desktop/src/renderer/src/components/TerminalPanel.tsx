@@ -745,9 +745,9 @@ export function TerminalPanel({
                   className={cn(
                     "size-1.5 rounded-full",
                     tab.activity === "waiting_for_input"
-                      ? "bg-[#f0c674]"
+                      ? "bg-warning"
                       : tab.activity === "idle"
-                        ? "bg-[#d6915e]"
+                        ? "bg-idle"
                         : "bg-accent"
                   )}
                   aria-hidden
@@ -825,7 +825,7 @@ export function TerminalPanel({
       </div>
 
       {launchMessage ? (
-        <div className="rounded-md border border-accent/40 bg-accent/10 px-2.5 py-2 text-sm text-[#bfe9e3]">
+        <div className="rounded-md border border-accent/40 bg-accent/10 px-2.5 py-2 text-sm text-accent-soft">
           {launchMessage}
         </div>
       ) : null}
@@ -839,7 +839,7 @@ export function TerminalPanel({
       ) : null}
 
       {activeTab?.error ? (
-        <div className="rounded-md border border-danger/45 bg-danger/10 px-2.5 py-2 text-sm text-[#ffd0d0]">
+        <div className="rounded-md border border-danger/45 bg-danger/10 px-2.5 py-2 text-sm text-danger-soft">
           {activeTab.error}
         </div>
       ) : null}

@@ -12,6 +12,7 @@ import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { Dialog } from "./ui/Dialog";
 import { Input } from "./ui/Input";
 import { StatusBadge } from "./ui/StatusBadge";
+import { pushToast } from "../lib/toast";
 import { cn } from "../lib/cn";
 
 const emptyProfile: AgentProfileInput = {
@@ -50,8 +51,6 @@ export function AgentProfilesPanel(): React.JSX.Element {
   const [draft, setDraft] = useState<AgentProfileInput | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? null;
@@ -69,8 +68,6 @@ export function AgentProfilesPanel(): React.JSX.Element {
   }, []);
 
   const loadProfiles = useCallback(async (): Promise<void> => {
-    setError(null);
-
     try {
       const loadedProfiles: AgentProfileRecord[] = await window.agentdesk.agentProfiles.list();
       setProfiles(loadedProfiles);
@@ -81,7 +78,7 @@ export function AgentProfilesPanel(): React.JSX.Element {
       );
       await loadAvailability();
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load agent profiles.");
+      pushToast(loadError instanceof Error ? loadError.message : "Failed to load agent profiles.", "error");
     }
   }, [loadAvailability]);
 
@@ -105,7 +102,6 @@ export function AgentProfilesPanel(): React.JSX.Element {
   const runCommandTest = async (profile: AgentProfileRecord): Promise<void> => {
     setTestingId(profile.id);
     setTestResult(null);
-    setError(null);
 
     try {
       const result = await window.agentdesk.agentProfiles.test({ id: profile.id });
@@ -121,7 +117,7 @@ export function AgentProfilesPanel(): React.JSX.Element {
         }
       }));
     } catch (testError) {
-      setError(testError instanceof Error ? testError.message : "Failed to test agent command.");
+      pushToast(testError instanceof Error ? testError.message : "Failed to test agent command.", "error");
     } finally {
       setTestingId(null);
     }
@@ -157,19 +153,18 @@ export function AgentProfilesPanel(): React.JSX.Element {
     }
 
     setIsSaving(true);
-    setError(null);
 
     try {
       const saved = editingId
         ? await window.agentdesk.agentProfiles.update({ ...draft, id: editingId })
         : await window.agentdesk.agentProfiles.create(draft);
 
-      setMessage(editingId ? "Agent profile updated." : "Agent profile created.");
+      pushToast(editingId ? "Agent profile updated." : "Agent profile created.", "success");
       setSelectedProfileId(saved.id);
       closeDialog();
       await loadProfiles();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save agent profile.");
+      pushToast(saveError instanceof Error ? saveError.message : "Failed to save agent profile.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -180,15 +175,13 @@ export function AgentProfilesPanel(): React.JSX.Element {
       return;
     }
 
-    setError(null);
-
     try {
       await window.agentdesk.agentProfiles.delete({ id: deleteId });
-      setMessage("Agent profile deleted.");
+      pushToast("Agent profile deleted.", "success");
       setDeleteId(null);
       await loadProfiles();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete agent profile.");
+      pushToast(deleteError instanceof Error ? deleteError.message : "Failed to delete agent profile.", "error");
     }
   };
 
@@ -206,18 +199,6 @@ export function AgentProfilesPanel(): React.JSX.Element {
             </Button>
           </div>
         </div>
-
-        {message ? (
-          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
-            {message}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
-            {error}
-          </div>
-        ) : null}
 
         {profiles.length === 0 ? (
           <Card className="border-dashed">
@@ -347,8 +328,8 @@ function AgentProfileDetail({
             className={cn(
               "mt-3 rounded-md border px-3 py-2 text-xs",
               testResult.installed && testResult.exitCode === 0
-                ? "border-accent/40 bg-accent/10 text-[#bfe9e3]"
-                : "border-danger/45 bg-danger/10 text-[#ffd0d0]"
+                ? "border-accent/40 bg-accent/10 text-accent-soft"
+                : "border-danger/45 bg-danger/10 text-danger-soft"
             )}
           >
             <p className="font-bold">{testResult.message}</p>

@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import type { AgentRunDetail, AgentRunListItem } from "../../../shared/runDetailTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { ReviewRecord } from "../../../shared/reviewTypes";
-import { buildReviewSummary, type ReviewStatus } from "../../../shared/reviewSummary";
-import { Badge } from "./ui/Badge";
+import { buildReviewSummary } from "../../../shared/reviewSummary";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { EmptyState } from "./ui/EmptyState";
 import { PageHeader } from "./ui/PageHeader";
 import { StatusBadge } from "./ui/StatusBadge";
+import { pushToast } from "../lib/toast";
 import { cn } from "../lib/cn";
 
 const formatDuration = (durationMs: number | null): string => {
@@ -23,18 +23,6 @@ const formatDuration = (durationMs: number | null): string => {
   return minutes > 0 ? `${minutes}m ${remainder}s` : `${remainder}s`;
 };
 
-const reviewStatusVariant = (status: ReviewStatus): "success" | "warning" | "danger" => {
-  if (status === "passed") {
-    return "success";
-  }
-
-  if (status === "warning") {
-    return "warning";
-  }
-
-  return "danger";
-};
-
 export function RunDetailPanel({
   project,
   initialRunId
@@ -47,13 +35,10 @@ export function RunDetailPanel({
   const [detail, setDetail] = useState<AgentRunDetail | null>(null);
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [isSavingReview, setIsSavingReview] = useState(false);
-  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const loadRuns = useCallback(async (projectId: string): Promise<void> => {
     setIsLoading(true);
-    setError(null);
 
     try {
       const loadedRuns = await window.agentdesk.runs.list(projectId);
@@ -64,7 +49,7 @@ export function RunDetailPanel({
           : loadedRuns[0]?.id ?? null
       );
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load runs.");
+      pushToast(loadError instanceof Error ? loadError.message : "Failed to load runs.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +57,6 @@ export function RunDetailPanel({
 
   useEffect(() => {
     setDetail(null);
-    setError(null);
 
     if (!project) {
       setRuns([]);
@@ -97,20 +81,21 @@ export function RunDetailPanel({
     }
 
     let cancelled = false;
-    setReviewMessage(null);
 
     void window.agentdesk.runs
       .getDetail({ projectId: project.id, runId: selectedRunId })
       .then((runDetail: AgentRunDetail) => {
         if (!cancelled) {
           setDetail(runDetail);
-          setError(null);
         }
       })
       .catch((detailError: unknown) => {
         if (!cancelled) {
           setDetail(null);
-          setError(detailError instanceof Error ? detailError.message : "Failed to load run detail.");
+          pushToast(
+            detailError instanceof Error ? detailError.message : "Failed to load run detail.",
+            "error"
+          );
         }
       });
 
@@ -138,7 +123,6 @@ export function RunDetailPanel({
     }
 
     setIsSavingReview(true);
-    setReviewMessage(null);
 
     try {
       await window.agentdesk.runs.saveReview({ projectId: project.id, runId: selectedRunId });
@@ -147,11 +131,9 @@ export function RunDetailPanel({
         runId: selectedRunId
       });
       setReviews(loaded);
-      setReviewMessage("Review saved to history.");
+      pushToast("Review saved to history.", "success");
     } catch (saveError) {
-      setReviewMessage(
-        saveError instanceof Error ? saveError.message : "Failed to save review."
-      );
+      pushToast(saveError instanceof Error ? saveError.message : "Failed to save review.", "error");
     } finally {
       setIsSavingReview(false);
     }
@@ -178,12 +160,6 @@ export function RunDetailPanel({
           subtitle={project.name}
           title="Agent Runs"
         />
-
-        {error ? (
-          <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
-            {error}
-          </div>
-        ) : null}
 
         {isLoading && runs.length === 0 ? (
           <EmptyState description="Loading runs..." title="Loading" />
@@ -226,7 +202,6 @@ export function RunDetailPanel({
         detail={detail}
         isSavingReview={isSavingReview}
         onSaveReview={() => void saveReview()}
-        reviewMessage={reviewMessage}
         reviews={reviews}
       />
     </section>
@@ -237,13 +212,11 @@ function ReviewSummaryCard({
   detail,
   reviews,
   isSavingReview,
-  reviewMessage,
   onSaveReview
 }: {
   detail: AgentRunDetail;
   reviews: ReviewRecord[];
   isSavingReview: boolean;
-  reviewMessage: string | null;
   onSaveReview: () => void;
 }): React.JSX.Element {
   const summary = buildReviewSummary({
@@ -258,7 +231,7 @@ function ReviewSummaryCard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <CardTitle>Review Summary</CardTitle>
         <div className="flex items-center gap-2">
-          <Badge variant={reviewStatusVariant(summary.status)}>{summary.status}</Badge>
+          <StatusBadge status={summary.status} />
           <Button disabled={isSavingReview} onClick={onSaveReview} size="sm" variant="secondary">
             {isSavingReview ? "Saving..." : "Save Review"}
           </Button>
@@ -278,7 +251,7 @@ function ReviewSummaryCard({
           ) : (
             <ul className="mt-1 grid gap-1">
               {summary.risks.map((risk) => (
-                <li className="text-sm text-[#ffd0d0]" key={risk}>
+                <li className="text-sm text-danger-soft" key={risk}>
                   • {risk}
                 </li>
               ))}
@@ -297,12 +270,6 @@ function ReviewSummaryCard({
         </div>
       </div>
 
-      {reviewMessage ? (
-        <div className="mt-3 rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs text-[#bfe9e3]">
-          {reviewMessage}
-        </div>
-      ) : null}
-
       {reviews.length > 0 ? (
         <div className="mt-3 border-t border-border pt-3">
           <span className="text-xs font-bold uppercase tracking-wide text-muted">
@@ -315,7 +282,7 @@ function ReviewSummaryCard({
                 key={review.id}
               >
                 <span className="text-xs text-muted">{review.createdAt}</span>
-                <Badge variant={reviewStatusVariant(review.status)}>{review.status}</Badge>
+                <StatusBadge status={review.status} />
               </li>
             ))}
           </ul>
@@ -329,13 +296,11 @@ function RunDetail({
   detail,
   reviews,
   isSavingReview,
-  reviewMessage,
   onSaveReview
 }: {
   detail: AgentRunDetail | null;
   reviews: ReviewRecord[];
   isSavingReview: boolean;
-  reviewMessage: string | null;
   onSaveReview: () => void;
 }): React.JSX.Element {
   if (!detail) {
@@ -358,7 +323,7 @@ function RunDetail({
           <StatusBadge status={detail.status} />
         </div>
         {detail.errorMessage ? (
-          <div className="mt-3 rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
+          <div className="mt-3 rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-danger-soft">
             <span className="font-bold">Error: </span>
             {detail.errorMessage}
           </div>
@@ -378,7 +343,6 @@ function RunDetail({
         detail={detail}
         isSavingReview={isSavingReview}
         onSaveReview={onSaveReview}
-        reviewMessage={reviewMessage}
         reviews={reviews}
       />
 

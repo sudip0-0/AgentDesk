@@ -407,7 +407,7 @@ export function App(): React.JSX.Element {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {runningAgentCount > 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-[#bfe9e3]">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-accent-soft">
                 <span className="size-1.5 animate-pulse rounded-full bg-accent" aria-hidden />
                 {runningAgentCount} running
               </span>

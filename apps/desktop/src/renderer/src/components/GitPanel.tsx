@@ -4,6 +4,7 @@ import type { GitChangedFile, GitDiffResult, GitStatusResult } from "../../../sh
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { TaskRecord } from "../../../shared/taskTypes";
 import { useAppSettings } from "../hooks/useAppSettings";
+import { pushToast } from "../lib/toast";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
@@ -47,8 +48,6 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
   const [viewStagedDiff, setViewStagedDiff] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const selectedFile =
     status.files.find((file) => file.path === selectedFilePath) ?? status.files[0] ?? null;
@@ -76,7 +75,6 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
 
   const loadGitData = useCallback(async (projectId: string): Promise<void> => {
     setIsLoading(true);
-    setError(null);
 
     try {
       const [loadedStatus, loadedTasks] = await Promise.all([
@@ -100,15 +98,13 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
       );
       setCommitMessage((current) => current || buildGeneratedCommitMessage(null, loadedStatus.stagedFiles));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load git status.");
+      pushToast(loadError instanceof Error ? loadError.message : "Failed to load git status.", "error");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    setMessage(null);
-    setError(null);
     setDiff(null);
     setSelectedFiles(new Set());
 
@@ -145,7 +141,7 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
       .catch((diffError: unknown) => {
         if (!cancelled) {
           setDiff(null);
-          setError(diffError instanceof Error ? diffError.message : "Failed to load diff.");
+          pushToast(diffError instanceof Error ? diffError.message : "Failed to load diff.", "error");
         }
       });
 
@@ -197,8 +193,6 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
     }
 
     setIsBusy(true);
-    setError(null);
-    setMessage(null);
 
     try {
       const updatedStatus = await window.agentdesk.git.createBranch({
@@ -206,9 +200,9 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
         branchName
       });
       setStatus(updatedStatus);
-      setMessage(`Created and switched to ${branchName}.`);
+      pushToast(`Created and switched to ${branchName}.`, "success");
     } catch (branchError) {
-      setError(branchError instanceof Error ? branchError.message : "Failed to create branch.");
+      pushToast(branchError instanceof Error ? branchError.message : "Failed to create branch.", "error");
     } finally {
       setIsBusy(false);
     }
@@ -220,8 +214,6 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
     }
 
     setIsBusy(true);
-    setError(null);
-    setMessage(null);
 
     try {
       const updatedStatus = await window.agentdesk.git.stageFiles({
@@ -231,9 +223,9 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
       setStatus(updatedStatus);
       setSelectedFiles(new Set());
       setCommitMessage(buildGeneratedCommitMessage(selectedTask?.title ?? null, updatedStatus.stagedFiles));
-      setMessage("Selected files staged.");
+      pushToast("Selected files staged.", "success");
     } catch (stageError) {
-      setError(stageError instanceof Error ? stageError.message : "Failed to stage files.");
+      pushToast(stageError instanceof Error ? stageError.message : "Failed to stage files.", "error");
     } finally {
       setIsBusy(false);
     }
@@ -245,8 +237,6 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
     }
 
     setIsBusy(true);
-    setError(null);
-    setMessage(null);
     setCommitConfirmOpen(false);
 
     try {
@@ -254,10 +244,10 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
         projectId: project.id,
         message: commitMessage
       });
-      setMessage(result.commitHash ? `Commit ${result.commitHash} created.` : result.summary);
+      pushToast(result.commitHash ? `Commit ${result.commitHash} created.` : result.summary, "success");
       await refresh();
     } catch (commitError) {
-      setError(commitError instanceof Error ? commitError.message : "Failed to commit changes.");
+      pushToast(commitError instanceof Error ? commitError.message : "Failed to commit changes.", "error");
     } finally {
       setIsBusy(false);
     }
@@ -294,18 +284,6 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
           subtitle={project.path}
           title="Git Status"
         />
-
-        {message ? (
-          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
-            {message}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
-            {error}
-          </div>
-        ) : null}
 
         {isLoading && status.files.length === 0 ? (
           <SkeletonCard lines={2} />

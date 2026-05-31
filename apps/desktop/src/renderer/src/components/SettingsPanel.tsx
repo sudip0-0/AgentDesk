@@ -7,6 +7,7 @@ import {
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
 import { Input } from "./ui/Input";
+import { pushToast } from "../lib/toast";
 
 const shortcutHelp =
   "Ctrl+Shift+P palette · Ctrl+Shift+N create task · Ctrl+Shift+L launch agent · Ctrl+Shift+Q run checks · Ctrl+Shift+` terminal · Ctrl+Tab switch terminal tabs · Ctrl+1-9 switch screens.";
@@ -39,7 +40,6 @@ export function SettingsPanel(): React.JSX.Element {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -76,16 +76,14 @@ export function SettingsPanel(): React.JSX.Element {
     }
 
     setIsSaving(true);
-    setError(null);
-    setMessage(null);
 
     try {
       const saved = await window.agentdesk.settings.update(draft);
       setSettings(saved);
       setDraft(saved);
-      setMessage("Settings saved.");
+      pushToast("Settings saved.", "success");
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save settings.");
+      pushToast(saveError instanceof Error ? saveError.message : "Failed to save settings.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -148,18 +146,6 @@ export function SettingsPanel(): React.JSX.Element {
           />
         </div>
       </Card>
-
-      {message ? (
-        <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
-          {message}
-        </div>
-      ) : null}
-
-      {error ? (
-        <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
-          {error}
-        </div>
-      ) : null}
 
       <div className="flex gap-2">
         <Button disabled={!isDirty || isSaving} onClick={() => void save()} variant="primary">

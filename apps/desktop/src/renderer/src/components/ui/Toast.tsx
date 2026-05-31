@@ -9,9 +9,9 @@ import {
 } from "../../lib/toast";
 
 const variantClasses: Record<ToastVariant, string> = {
-  info: "border-accent/40 bg-accent/10 text-[#bfe9e3]",
-  success: "border-accent/40 bg-accent/10 text-[#bfe9e3]",
-  error: "border-danger/45 bg-danger/10 text-[#ffd0d0]"
+  info: "border-accent/40 bg-accent/10 text-accent-soft",
+  success: "border-accent/40 bg-accent/10 text-accent-soft",
+  error: "border-danger/45 bg-danger/10 text-danger-soft"
 };
 
 export function ToastContainer(): React.JSX.Element {

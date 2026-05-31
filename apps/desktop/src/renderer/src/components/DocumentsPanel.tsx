@@ -13,6 +13,7 @@ import { Dialog } from "./ui/Dialog";
 import { EmptyState } from "./ui/EmptyState";
 import { Markdown } from "./ui/Markdown";
 import { PageHeader } from "./ui/PageHeader";
+import { pushToast } from "../lib/toast";
 import { cn } from "../lib/cn";
 
 export function DocumentsPanel({
@@ -30,8 +31,6 @@ export function DocumentsPanel({
   const [lastPreviewMode, setLastPreviewMode] = useState<DocumentPreviewMode | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const selectedFile =
     preview?.files.find((file) => file.name === selectedFileName) ?? preview?.files[0] ?? null;
@@ -44,8 +43,6 @@ export function DocumentsPanel({
     }
 
     setIsBusy(true);
-    setError(null);
-    setMessage(null);
 
     try {
       const result = await window.agentdesk.documents.previewDefaults(project.id);
@@ -53,9 +50,12 @@ export function DocumentsPanel({
       setLastPreviewMode("defaults");
       setSelectedFileName(result.files[0]?.name ?? null);
       setSelectedFiles(new Set(result.files.map((file: DocumentPreviewFile) => file.name)));
-      setMessage("Default documentation preview generated.");
+      pushToast("Default documentation preview generated.", "success");
     } catch (previewError) {
-      setError(previewError instanceof Error ? previewError.message : "Failed to generate document preview.");
+      pushToast(
+        previewError instanceof Error ? previewError.message : "Failed to generate document preview.",
+        "error"
+      );
     } finally {
       setIsBusy(false);
     }
@@ -67,8 +67,6 @@ export function DocumentsPanel({
     }
 
     setIsBusy(true);
-    setError(null);
-    setMessage(null);
 
     try {
       const result = await window.agentdesk.documents.previewProgress(project.id);
@@ -79,9 +77,12 @@ export function DocumentsPanel({
       setLastPreviewMode("progress");
       setSelectedFileName(result.file.name);
       setSelectedFiles(new Set([result.file.name]));
-      setMessage("Progress sync preview generated from current task, run, and quality status.");
+      pushToast("Progress sync preview generated from current task, run, and quality status.", "success");
     } catch (previewError) {
-      setError(previewError instanceof Error ? previewError.message : "Failed to generate progress preview.");
+      pushToast(
+        previewError instanceof Error ? previewError.message : "Failed to generate progress preview.",
+        "error"
+      );
     } finally {
       setIsBusy(false);
     }
@@ -123,8 +124,6 @@ export function DocumentsPanel({
     }
 
     setIsBusy(true);
-    setError(null);
-    setMessage(null);
     setConfirmOpen(false);
 
     try {
@@ -132,7 +131,7 @@ export function DocumentsPanel({
         projectId: project.id,
         files: filesToWrite
       });
-      setMessage(`Wrote ${result.writtenFiles.length} markdown file(s).`);
+      pushToast(`Wrote ${result.writtenFiles.length} markdown file(s).`, "success");
 
       if (lastPreviewMode === "progress") {
         await loadProgressPreview();
@@ -140,7 +139,7 @@ export function DocumentsPanel({
         await loadDefaultPreview();
       }
     } catch (writeError) {
-      setError(writeError instanceof Error ? writeError.message : "Failed to write markdown files.");
+      pushToast(writeError instanceof Error ? writeError.message : "Failed to write markdown files.", "error");
     } finally {
       setIsBusy(false);
     }
@@ -159,18 +158,6 @@ export function DocumentsPanel({
     <section className="grid gap-4 xl:grid-cols-[minmax(360px,460px)_1fr]">
       <div className="grid content-start gap-3">
         <PageHeader subtitle={project.path} title="Documents" />
-
-        {message ? (
-          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
-            {message}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
-            {error}
-          </div>
-        ) : null}
 
         <Card>
           <CardTitle>Generate Default Docs</CardTitle>

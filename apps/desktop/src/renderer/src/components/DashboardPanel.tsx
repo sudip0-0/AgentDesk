@@ -98,7 +98,7 @@ export function DashboardPanel({
       />
 
       {error ? (
-        <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
+        <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-danger-soft">
           {error}
         </div>
       ) : null}

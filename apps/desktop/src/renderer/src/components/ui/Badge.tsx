@@ -9,9 +9,9 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 
 const variantClasses: Record<BadgeVariant, string> = {
   default: "bg-panel-strong text-muted",
-  success: "bg-accent/15 text-[#bfe9e3]",
-  warning: "bg-accent-strong/20 text-[#ffe0a3]",
-  danger: "bg-danger/20 text-[#ffd0d0]"
+  success: "bg-accent/15 text-accent-soft",
+  warning: "bg-accent-strong/20 text-warning-soft",
+  danger: "bg-danger/20 text-danger-soft"
 };
 
 export function Badge({

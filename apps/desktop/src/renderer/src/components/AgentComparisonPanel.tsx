@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ProjectSummary } from "../../../shared/projectTypes";
+import type { QualityCheckRecord } from "../../../shared/qualityTypes";
 import type { AgentRunListItem } from "../../../shared/runDetailTypes";
 import type { TaskRecord } from "../../../shared/taskTypes";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
@@ -25,6 +26,12 @@ interface AgentGroup {
   runs: AgentRunListItem[];
 }
 
+interface QualityCounts {
+  passed: number;
+  failed: number;
+  total: number;
+}
+
 export function AgentComparisonPanel({
   project,
   onOpenRun
@@ -35,6 +42,7 @@ export function AgentComparisonPanel({
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [runs, setRuns] = useState<AgentRunListItem[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
+  const [qualityByRun, setQualityByRun] = useState<Record<string, QualityCounts>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const load = useCallback(async (projectId: string): Promise<void> => {
@@ -106,6 +114,50 @@ export function AgentComparisonPanel({
     return [...byAgent.entries()].map(([agentName, agentRuns]) => ({ agentName, runs: agentRuns }));
   }, [runs, selectedTaskId]);
 
+  // Per-run quality pass/fail counts (accurate, linked by agentRunId). Reuses existing IPC.
+  useEffect(() => {
+    if (!project || !selectedTaskId) {
+      setQualityByRun({});
+      return;
+    }
+
+    const taskRuns = runs.filter((run) => run.taskId === selectedTaskId);
+
+    if (taskRuns.length === 0) {
+      setQualityByRun({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void Promise.all(
+      taskRuns.map(async (run): Promise<readonly [string, QualityCounts]> => {
+        try {
+          const checks = await window.agentdesk.quality.listChecks({
+            projectId: project.id,
+            agentRunId: run.id
+          });
+          const passed = checks.filter((check: QualityCheckRecord) => check.status === "passed").length;
+          const failed = checks.filter(
+            (check: QualityCheckRecord) => check.status === "failed" || check.status === "blocked"
+          ).length;
+
+          return [run.id, { passed, failed, total: checks.length }] as const;
+        } catch {
+          return [run.id, { passed: 0, failed: 0, total: 0 }] as const;
+        }
+      })
+    ).then((entries) => {
+      if (!cancelled) {
+        setQualityByRun(Object.fromEntries(entries));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project, runs, selectedTaskId]);
+
   if (!project) {
     return <EmptyState description="Open a project to compare agent runs." title="No project selected" />;
   }
@@ -173,6 +225,13 @@ export function AgentComparisonPanel({
                     <span className="text-xs text-muted">
                       Exit: {run.exitCode === null ? "—" : run.exitCode}
                     </span>
+                    {qualityByRun[run.id] && qualityByRun[run.id]!.total > 0 ? (
+                      <span className="text-xs text-muted">
+                        Checks: {qualityByRun[run.id]!.passed} passed · {qualityByRun[run.id]!.failed} failed
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">Checks: none</span>
+                    )}
                   </button>
                 ))}
               </div>

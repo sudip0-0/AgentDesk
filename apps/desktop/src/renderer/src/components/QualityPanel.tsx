@@ -15,6 +15,7 @@ import { Dialog } from "./ui/Dialog";
 import { EmptyState } from "./ui/EmptyState";
 import { Input } from "./ui/Input";
 import { StatusBadge } from "./ui/StatusBadge";
+import { pushToast } from "../lib/toast";
 import { cn } from "../lib/cn";
 
 const emptyCommand = (projectId: string): QualityCommandInput => ({
@@ -67,8 +68,6 @@ export function QualityPanel({
   const [draft, setDraft] = useState<QualityCommandInput | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedCheckId, setSelectedCheckId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [runConfirmOpen, setRunConfirmOpen] = useState(false);
@@ -77,8 +76,6 @@ export function QualityPanel({
   const selectedCheck = checks.find((check) => check.id === selectedCheckId) ?? checks[0] ?? null;
 
   const loadQualityData = useCallback(async (projectId: string): Promise<void> => {
-    setError(null);
-
     try {
       const [loadedCommands, loadedChecks]: [QualityCommandRecord[], QualityCheckRecord[]] = await Promise.all([
         window.agentdesk.quality.listCommands(projectId),
@@ -95,13 +92,11 @@ export function QualityPanel({
         current && loadedChecks.some((check) => check.id === current) ? current : loadedChecks[0]?.id ?? null
       );
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load quality data.");
+      pushToast(loadError instanceof Error ? loadError.message : "Failed to load quality data.", "error");
     }
   }, [runContext?.agentRunId, runContext?.taskId]);
 
   useEffect(() => {
-    setMessage(null);
-    setError(null);
     setDraft(null);
     setEditingId(null);
 
@@ -121,7 +116,7 @@ export function QualityPanel({
     }
 
     if (commands.length === 0) {
-      setMessage("Add a quality command before running checks.");
+      pushToast("Add a quality command before running checks.", "info");
     } else {
       setRunConfirmOpen(true);
     }
@@ -155,22 +150,21 @@ export function QualityPanel({
     }
 
     setIsSaving(true);
-    setError(null);
 
     try {
       if (editingId) {
         await window.agentdesk.quality.updateCommand({ ...draft, id: editingId });
-        setMessage("Quality command updated.");
+        pushToast("Quality command updated.", "success");
       } else {
         await window.agentdesk.quality.createCommand(draft);
-        setMessage("Quality command added.");
+        pushToast("Quality command added.", "success");
       }
 
       setDraft(null);
       setEditingId(null);
       await loadQualityData(project.id);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save quality command.");
+      pushToast(saveError instanceof Error ? saveError.message : "Failed to save quality command.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -181,18 +175,16 @@ export function QualityPanel({
       return;
     }
 
-    setError(null);
-
     try {
       await window.agentdesk.quality.deleteCommand({
         projectId: project.id,
         id: deleteConfirmCommand.id
       });
-      setMessage("Quality command deleted.");
+      pushToast("Quality command deleted.", "success");
       setDeleteConfirmCommand(null);
       await loadQualityData(project.id);
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete quality command.");
+      pushToast(deleteError instanceof Error ? deleteError.message : "Failed to delete quality command.", "error");
     }
   };
 
@@ -202,8 +194,6 @@ export function QualityPanel({
     }
 
     setIsRunning(true);
-    setError(null);
-    setMessage(null);
     setRunConfirmOpen(false);
 
     try {
@@ -214,9 +204,12 @@ export function QualityPanel({
       });
       setChecks(results);
       setSelectedCheckId(results[0]?.id ?? null);
-      setMessage(summarizeRunResults(results));
+      const hasFailure = results.some(
+        (result: QualityCheckRecord) => result.status === "failed" || result.status === "blocked"
+      );
+      pushToast(summarizeRunResults(results), hasFailure ? "error" : "success");
     } catch (runError) {
-      setError(runError instanceof Error ? runError.message : "Failed to run quality checks.");
+      pushToast(runError instanceof Error ? runError.message : "Failed to run quality checks.", "error");
     } finally {
       setIsRunning(false);
     }
@@ -227,17 +220,15 @@ export function QualityPanel({
       return;
     }
 
-    setError(null);
-
     try {
       await window.agentdesk.quality.createFixTask({
         projectId: project.id,
         qualityCheckId: check.id
       });
-      setMessage("Fix task created.");
+      pushToast("Fix task created.", "success");
       onFixTaskCreated();
     } catch (fixError) {
-      setError(fixError instanceof Error ? fixError.message : "Failed to create fix task.");
+      pushToast(fixError instanceof Error ? fixError.message : "Failed to create fix task.", "error");
     }
   };
 
@@ -264,7 +255,7 @@ export function QualityPanel({
         </div>
 
         {runContext?.taskId || runContext?.agentRunId ? (
-          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
+          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent-soft">
             <p>
               Linked context:
               {runContext.taskTitle ? ` task "${runContext.taskTitle}"` : ""}
@@ -275,18 +266,6 @@ export function QualityPanel({
                 Clear link
               </Button>
             ) : null}
-          </div>
-        ) : null}
-
-        {message ? (
-          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
-            {message}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
-            {error}
           </div>
         ) : null}
 
@@ -320,8 +299,8 @@ export function QualityPanel({
                   className={cn(
                     "mt-2 rounded-md border px-2 py-1 text-xs",
                     risk.level === "block"
-                      ? "border-danger/45 bg-danger/10 text-[#ffd0d0]"
-                      : "border-accent-strong/45 bg-accent-strong/10 text-[#ffe0a3]"
+                      ? "border-danger/45 bg-danger/10 text-danger-soft"
+                      : "border-accent-strong/45 bg-accent-strong/10 text-warning-soft"
                   )}
                 >
                   {risk.level === "block" ? "Blocked: " : "Warning: "}
@@ -398,7 +377,7 @@ export function QualityPanel({
                   <span
                     className={cn(
                       "mt-1 block text-xs font-bold",
-                      risk.level === "block" ? "text-[#ffd0d0]" : "text-[#ffe0a3]"
+                      risk.level === "block" ? "text-danger-soft" : "text-warning-soft"
                     )}
                   >
                     {risk.level === "block"

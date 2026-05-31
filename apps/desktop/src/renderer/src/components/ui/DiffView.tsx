@@ -24,9 +24,9 @@ const classifyLine = (line: string): DiffLineKind => {
 };
 
 const lineClasses: Record<DiffLineKind, string> = {
-  add: "bg-accent/10 text-[#bfe9e3]",
-  remove: "bg-danger/10 text-[#ffd0d0]",
-  hunk: "bg-accent-strong/10 text-[#ffe0a3]",
+  add: "bg-accent/10 text-accent-soft",
+  remove: "bg-danger/10 text-danger-soft",
+  hunk: "bg-accent-strong/10 text-warning-soft",
   meta: "text-muted",
   context: "text-muted"
 };

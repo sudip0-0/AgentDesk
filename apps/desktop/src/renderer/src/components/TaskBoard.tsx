@@ -14,6 +14,7 @@ import type { TaskInput, TaskPriority, TaskRecord, TaskStatus } from "../../../s
 import { taskPriorities, taskStatuses } from "../../../shared/taskTypes";
 import type { TaskActionRequestType, UiActionRequest } from "../../../shared/uiActionTypes";
 import { useAppSettings } from "../hooks/useAppSettings";
+import { pushToast } from "../lib/toast";
 import { cn } from "../lib/cn";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
@@ -79,8 +80,6 @@ export function TaskBoard({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TaskInput | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -159,7 +158,6 @@ export function TaskBoard({
 
   const loadTasks = async (projectId: string): Promise<void> => {
     setIsLoading(true);
-    setError(null);
 
     try {
       const loadedTasks: TaskRecord[] = await window.agentdesk.tasks.list(projectId);
@@ -168,15 +166,13 @@ export function TaskBoard({
         current && loadedTasks.some((task) => task.id === current) ? current : loadedTasks[0]?.id ?? null
       );
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load tasks.");
+      pushToast(loadError instanceof Error ? loadError.message : "Failed to load tasks.", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    setMessage(null);
-    setError(null);
     setEditingTaskId(null);
     setDraft(null);
     setFixContext("");
@@ -229,7 +225,7 @@ export function TaskBoard({
 
   const requestLaunchSelected = (): void => {
     if (!project || !selectedTask) {
-      setMessage("Select a task before launching an agent.");
+      pushToast("Select a task before launching an agent.", "info");
       return;
     }
 
@@ -237,7 +233,7 @@ export function TaskBoard({
       agentProfiles.find((entry) => entry.id === selectedAgentProfileId) ?? agentProfiles[0] ?? null;
 
     if (!profile) {
-      setMessage("Add an agent profile before launching.");
+      pushToast("Add an agent profile before launching.", "info");
       return;
     }
 
@@ -265,7 +261,7 @@ export function TaskBoard({
       if (selectedTask) {
         onRunQualityChecks(selectedTask);
       } else {
-        setMessage("Select a task before running checks.");
+        pushToast("Select a task before running checks.", "info");
       }
     }
 
@@ -305,7 +301,6 @@ export function TaskBoard({
     }
 
     setIsSaving(true);
-    setError(null);
 
     try {
       const savedTask = editingTaskId
@@ -322,10 +317,10 @@ export function TaskBoard({
       });
       setSelectedTaskId(savedTask.id);
       closeDialog();
-      setMessage(editingTaskId ? "Task updated." : "Task created.");
+      pushToast(editingTaskId ? "Task updated." : "Task created.", "success");
       onTasksChanged();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save task.");
+      pushToast(saveError instanceof Error ? saveError.message : "Failed to save task.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -336,8 +331,6 @@ export function TaskBoard({
       return;
     }
 
-    setError(null);
-
     try {
       const updatedTask = await window.agentdesk.tasks.setStatus({
         projectId: project.id,
@@ -346,10 +339,10 @@ export function TaskBoard({
       });
       setTasks((current) => current.map((task) => (task.id === taskId ? updatedTask : task)));
       setSelectedTaskId(taskId);
-      setMessage("Task status updated. Sync PROGRESS.md when you are ready to record progress.");
+      pushToast("Task status updated. Sync PROGRESS.md to record progress.", "success");
       onTasksChanged();
     } catch (statusError) {
-      setError(statusError instanceof Error ? statusError.message : "Failed to update task status.");
+      pushToast(statusError instanceof Error ? statusError.message : "Failed to update task status.", "error");
     }
   };
 
@@ -358,17 +351,15 @@ export function TaskBoard({
       return;
     }
 
-    setError(null);
-
     try {
       await window.agentdesk.tasks.delete({ projectId: project.id, id: selectedTask.id });
       setTasks((current) => current.filter((task) => task.id !== selectedTask.id));
       setSelectedTaskId(null);
       setDeleteConfirmOpen(false);
-      setMessage("Task deleted.");
+      pushToast("Task deleted.", "success");
       onTasksChanged();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete task.");
+      pushToast(deleteError instanceof Error ? deleteError.message : "Failed to delete task.", "error");
     }
   };
 
@@ -393,18 +384,6 @@ export function TaskBoard({
             New Task
           </Button>
         </div>
-
-        {message ? (
-          <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
-            {message}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
-            {error}
-          </div>
-        ) : null}
 
         {isLoading ? (
           <EmptyState description="Reading local task records from SQLite." title="Loading tasks" />
@@ -480,9 +459,9 @@ export function TaskBoard({
             const prompt = buildTaskPrompt(task, templateId);
             const templateLabel = promptTemplates.find((template) => template.id === templateId)?.label ?? "Prompt";
             await navigator.clipboard.writeText(prompt);
-            setMessage(`${templateLabel} prompt copied.`);
+            pushToast(`${templateLabel} prompt copied.`, "success");
           } catch {
-            setError("Failed to copy the prompt.");
+            pushToast("Failed to copy the prompt.", "error");
           }
         }}
         onDelete={() => setDeleteConfirmOpen(true)}
