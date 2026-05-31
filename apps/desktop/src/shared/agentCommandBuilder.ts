@@ -88,16 +88,22 @@ const quotePowerShellArg = (part: string): string => `'${part.split("'").join("'
 const formatArgvCommand = (executable: string, args: string[]): string =>
   [executable, ...args].map(quoteCommandPart).join(" ");
 
+const getRuntimePlatform = (): NodeJS.Platform =>
+  typeof process === "undefined" ? "win32" : process.platform;
+
+const getRuntimeEnv = (name: string): string | undefined =>
+  typeof process === "undefined" ? undefined : process.env[name];
+
 export const resolveShellExecutable = (
   shell: TerminalShell,
-  platform = process.platform
+  platform = getRuntimePlatform()
 ): string => {
   if (platform !== "win32") {
-    return process.env.SHELL ?? "/bin/sh";
+    return getRuntimeEnv("SHELL") ?? "/bin/sh";
   }
 
   if (shell === "cmd") {
-    return process.env.ComSpec ?? "cmd.exe";
+    return getRuntimeEnv("ComSpec") ?? "cmd.exe";
   }
 
   return "powershell.exe";
@@ -108,7 +114,7 @@ export const wrapAgentCommandForShell = (
   shell: TerminalShell,
   executable: string,
   args: string[],
-  platform = process.platform
+  platform = getRuntimePlatform()
 ): { executable: string; args: string[] } => {
   if (platform !== "win32") {
     const shellExecutable = resolveShellExecutable(shell, platform);
@@ -175,7 +181,7 @@ export const buildAgentLaunchConfig = (
     prompt: string;
     cwd: string;
   },
-  platform = process.platform
+  platform = getRuntimePlatform()
 ): AgentLaunchConfig => {
   const preview = buildAgentCommandPreview(profile, context);
   const wrapped = wrapAgentCommandForShell(profile.shell, preview.executable, preview.args, platform);

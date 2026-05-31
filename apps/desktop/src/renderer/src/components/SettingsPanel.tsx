@@ -20,7 +20,7 @@ interface ToggleRowProps {
 
 function ToggleRow({ label, description, checked, onChange }: ToggleRowProps): React.JSX.Element {
   return (
-    <label className="flex items-start justify-between gap-4 rounded-md border border-border bg-[#10161d] px-3 py-3">
+    <label className="flex items-start justify-between gap-4 rounded-md border border-border bg-inset px-3 py-3">
       <span className="min-w-0">
         <span className="block text-sm font-bold text-text">{label}</span>
         <span className="mt-0.5 block text-xs text-muted">{description}</span>

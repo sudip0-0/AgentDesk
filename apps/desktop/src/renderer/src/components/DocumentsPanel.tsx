@@ -248,7 +248,7 @@ export function DocumentsPanel({
               {overwriteCount} file(s) will overwrite existing content. Review the preview before continuing.
             </p>
           ) : null}
-          <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs text-muted">
+          <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs text-muted">
             {filesToWrite.map((file) => `${file.exists ? "Overwrite" : "Create"} ${file.name}`).join("\n")}
           </pre>
           <div className="flex justify-end gap-2 border-t border-border pt-4">
@@ -296,11 +296,11 @@ function DocumentPreview({ file }: { file: DocumentPreviewFile | null }): React.
       </div>
       {view === "rendered" ? (
         <Markdown
-          className="mt-3 max-h-[660px] overflow-auto rounded-md border border-border bg-[#0d1117] p-4"
+          className="mt-3 max-h-[660px] overflow-auto rounded-md border border-border bg-code p-4"
           content={file.content}
         />
       ) : (
-        <pre className="mt-3 max-h-[660px] overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+        <pre className="mt-3 max-h-[660px] overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs leading-relaxed text-muted">
           {file.content}
         </pre>
       )}

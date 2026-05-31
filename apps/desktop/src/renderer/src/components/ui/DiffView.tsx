@@ -102,7 +102,7 @@ export function DiffView({
 }): React.JSX.Element {
   if (!diff.trim()) {
     return (
-      <pre className={cn("overflow-auto rounded-md border border-border bg-[#0d1117] p-3 text-xs text-muted", className)}>
+      <pre className={cn("overflow-auto rounded-md border border-border bg-code p-3 text-xs text-muted", className)}>
         {emptyMessage}
       </pre>
     );
@@ -113,7 +113,7 @@ export function DiffView({
   return (
     <div
       className={cn(
-        "overflow-auto rounded-md border border-border bg-[#0d1117] p-1 font-mono text-xs leading-relaxed",
+        "overflow-auto rounded-md border border-border bg-code p-1 font-mono text-xs leading-relaxed",
         className
       )}
     >

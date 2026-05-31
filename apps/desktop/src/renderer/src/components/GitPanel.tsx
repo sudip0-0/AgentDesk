@@ -3,6 +3,7 @@ import { branchNameFromTaskTitle, buildGeneratedCommitMessage } from "../../../s
 import type { GitChangedFile, GitDiffResult, GitStatusResult } from "../../../shared/gitTypes";
 import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { TaskRecord } from "../../../shared/taskTypes";
+import { useAppSettings } from "../hooks/useAppSettings";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardDescription, CardTitle } from "./ui/Card";
@@ -32,6 +33,7 @@ const statusLabel = (file: GitChangedFile): string => {
 };
 
 export function GitPanel({ project }: { project: ProjectSummary | null }): React.JSX.Element {
+  const settings = useAppSettings();
   const [status, setStatus] = useState<GitStatusResult>(emptyStatus);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
@@ -155,6 +157,23 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
   const refresh = async (): Promise<void> => {
     if (project) {
       await loadGitData(project.id);
+    }
+  };
+
+  // Skip the confirmation dialog when the user has disabled git confirmations.
+  const requestCreateBranch = (): void => {
+    if (settings.confirmDestructiveGit) {
+      setBranchConfirmOpen(true);
+    } else {
+      void createBranch();
+    }
+  };
+
+  const requestCommit = (): void => {
+    if (settings.confirmDestructiveGit) {
+      setCommitConfirmOpen(true);
+    } else {
+      void commitStagedChanges();
     }
   };
 
@@ -312,7 +331,7 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
                 <label className="grid gap-1.5">
                   <span className="text-xs font-bold text-muted">Task</span>
                   <select
-                    className="w-full rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+                    className="w-full rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
                     onChange={(event) => applyTaskBranchName(event.target.value)}
                     value={selectedTaskId}
                   >
@@ -331,7 +350,7 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
                 />
                 <Button
                   disabled={isBusy || branchName.trim().length === 0}
-                  onClick={() => setBranchConfirmOpen(true)}
+                  onClick={requestCreateBranch}
                   variant="primary"
                 >
                   Create Branch
@@ -383,7 +402,7 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
             <label className="mt-3 grid gap-1.5">
               <span className="text-xs font-bold text-muted">Commit Message</span>
               <textarea
-                className="min-h-40 w-full resize-y rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+                className="min-h-40 w-full resize-y rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
                 onChange={(event) => setCommitMessage(event.target.value)}
                 value={commitMessage}
               />
@@ -391,7 +410,7 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
             <div className="mt-3 flex justify-end">
               <Button
                 disabled={isBusy || status.stagedFiles.length === 0 || commitMessage.trim().length === 0}
-                onClick={() => setCommitConfirmOpen(true)}
+                onClick={requestCommit}
                 variant="primary"
               >
                 Commit Staged Changes
@@ -439,13 +458,13 @@ export function GitPanel({ project }: { project: ProjectSummary | null }): React
         title="Commit staged changes?"
       >
         <div className="grid gap-3">
-          <div className="rounded-md border border-border bg-[#0d1117] p-3 text-sm text-muted">
+          <div className="rounded-md border border-border bg-code p-3 text-sm text-muted">
             <span className="font-bold text-text">{status.stagedFiles.length} staged file(s)</span>
             <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs">
               {status.stagedFiles.map((file) => file.path).join("\n")}
             </pre>
           </div>
-          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs text-muted">
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs text-muted">
             {commitMessage}
           </pre>
           <div className="flex justify-end gap-2 border-t border-border pt-4">
@@ -487,7 +506,7 @@ function FileList({
         {files.map((file) => (
           <div
             className={cn(
-              "grid grid-cols-[auto_1fr] items-center gap-2 rounded-md border bg-[#10161d] px-2 py-2",
+              "grid grid-cols-[auto_1fr] items-center gap-2 rounded-md border bg-inset px-2 py-2",
               file.path === selectedFilePath ? "border-accent/60" : "border-border"
             )}
             key={`${title}-${file.path}`}
@@ -562,7 +581,7 @@ function GitDiffViewer({
       </div>
 
       {diff?.message ? (
-        <div className="mt-3 rounded-md border border-border bg-[#10161d] px-3 py-2 text-sm text-muted">
+        <div className="mt-3 rounded-md border border-border bg-inset px-3 py-2 text-sm text-muted">
           {diff.message}
         </div>
       ) : null}

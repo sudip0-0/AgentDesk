@@ -33,8 +33,8 @@ const createMainWindow = (): BrowserWindow => {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    minWidth: 1024,
-    minHeight: 640,
+    minWidth: 720,
+    minHeight: 600,
     show: false,
     title: "AgentDesk",
     webPreferences: {

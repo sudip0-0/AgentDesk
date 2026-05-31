@@ -92,8 +92,7 @@ const subscribe = <T>(
 
 const agentdeskApi: AgentDeskApi = {
   app: {
-    getName: (): string => "AgentDesk",
-    getPhase: (): string => "Polish and Portfolio Readiness"
+    getName: (): string => "AgentDesk"
   },
   db: {
     getHealth: (): Promise<DatabaseHealth> => ipcRenderer.invoke("db:health") as Promise<DatabaseHealth>

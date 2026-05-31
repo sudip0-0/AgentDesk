@@ -20,6 +20,7 @@ import { TranscriptPanel } from "./TranscriptPanel";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
+import { StatusBadge } from "./ui/StatusBadge";
 import { cn } from "../lib/cn";
 import "@xterm/xterm/css/xterm.css";
 
@@ -668,39 +669,47 @@ export function TerminalPanel({
   const canKill = Boolean(activeTab?.sessionId);
   const canViewTranscript = Boolean(activeTab?.runId);
 
-  const statusVariant = (
-    status: TerminalStatus,
-    activity: TerminalActivityState
-  ): "default" | "success" | "warning" | "danger" => {
-    if (status === "running" && (activity === "waiting_for_input" || activity === "idle")) {
-      return "warning";
-    }
+  const statusKey = (tab: TerminalTab): string => {
+    if (tab.status === "running") {
+      if (tab.activity === "waiting_for_input") {
+        return "waiting_for_input";
+      }
 
-    if (status === "running") {
-      return "success";
-    }
+      if (tab.activity === "idle") {
+        return "idle";
+      }
 
-    if (status === "starting") {
-      return "warning";
-    }
-
-    if (status === "error") {
-      return "danger";
-    }
-
-    return "default";
-  };
-
-  const statusLabel = (tab: TerminalTab): string => {
-    if (tab.status === "running" && tab.activity === "waiting_for_input") {
-      return "waiting for input";
-    }
-
-    if (tab.status === "running" && tab.activity === "idle") {
-      return "idle";
+      return "running";
     }
 
     return tab.status;
+  };
+
+  const tabButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const onTabKeyDown = (event: React.KeyboardEvent, index: number): void => {
+    const last = tabs.length - 1;
+    let next = -1;
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      next = index === last ? 0 : index + 1;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      next = index === 0 ? last : index - 1;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = last;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    const target = tabs[next];
+
+    if (target) {
+      setActiveTabId(target.id);
+      tabButtonRefs.current[next]?.focus();
+    }
   };
 
   return (
@@ -709,10 +718,10 @@ export function TerminalPanel({
       aria-label="Embedded terminal"
     >
       <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Terminal tabs">
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <div
             className={cn(
-              "flex items-stretch overflow-hidden rounded-md border bg-[#10161d]",
+              "flex items-stretch overflow-hidden rounded-md border bg-inset",
               tab.id === activeTabId ? "border-accent/50 bg-panel-strong" : "border-border"
             )}
             key={tab.id}
@@ -720,9 +729,14 @@ export function TerminalPanel({
           >
             <button
               aria-selected={tab.id === activeTabId}
-              className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-bold text-muted hover:text-text"
+              className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-bold text-muted outline-none hover:text-text focus-visible:ring-2 focus-visible:ring-accent/70"
               onClick={() => setActiveTabId(tab.id)}
+              onKeyDown={(event) => onTabKeyDown(event, index)}
+              ref={(node) => {
+                tabButtonRefs.current[index] = node;
+              }}
               role="tab"
+              tabIndex={tab.id === activeTabId ? 0 : -1}
               type="button"
             >
               <span className="max-w-[140px] truncate">{tab.title}</span>
@@ -767,7 +781,7 @@ export function TerminalPanel({
         <label className="grid gap-1.5">
           <span className="text-xs font-bold text-muted">Shell</span>
           <select
-            className="w-full rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text"
+            className="w-full rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text"
             onChange={(event) => setShell(event.target.value as TerminalShell)}
             value={shell}
           >
@@ -818,9 +832,7 @@ export function TerminalPanel({
 
       {activeTab ? (
         <div className="flex min-w-0 items-center gap-2 text-xs text-muted">
-          <Badge variant={statusVariant(activeTab.status, activeTab.activity)}>
-            {statusLabel(activeTab)}
-          </Badge>
+          <StatusBadge status={statusKey(activeTab)} />
           <span className="truncate">{activeTab.label}</span>
           {activeTab.taskId ? <Badge variant="warning">Task linked</Badge> : null}
         </div>
@@ -832,7 +844,7 @@ export function TerminalPanel({
         </div>
       ) : null}
 
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-[#28313b] bg-[#0d1117] p-2">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-[#28313b] bg-code p-2">
         {tabs.map((tab) => (
           <TerminalTabPane
             isActive={tab.id === activeTabId}

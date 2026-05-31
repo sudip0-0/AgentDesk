@@ -58,6 +58,12 @@ export const useAppKeyboardShortcuts = (handlers: AppShortcutHandlers): void => 
         return;
       }
 
+      if (matchesShortcut(event, "k", { ctrl: true })) {
+        event.preventDefault();
+        current.onCommandPalette();
+        return;
+      }
+
       if (matchesShortcut(event, "n", { ctrl: true, shift: true })) {
         event.preventDefault();
         current.onCreateTask();

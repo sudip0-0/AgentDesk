@@ -6,6 +6,7 @@ import type { OpenProjectResult, ProjectOverview, ProjectSummary } from "../../s
 import type { TaskTerminalLaunch } from "../../shared/taskLaunchTypes";
 import type { TaskRecord } from "../../shared/taskTypes";
 import { AgentProfilesPanel } from "./components/AgentProfilesPanel";
+import { AgentComparisonPanel } from "./components/AgentComparisonPanel";
 import { CommandPalette, type CommandPaletteAction } from "./components/CommandPalette";
 import { DashboardPanel } from "./components/DashboardPanel";
 import { DemoFlowPanel } from "./components/DemoFlowPanel";
@@ -31,6 +32,8 @@ import { Card, CardDescription, CardTitle } from "./components/ui/Card";
 import { EmptyState } from "./components/ui/EmptyState";
 import { StatusBadge } from "./components/ui/StatusBadge";
 import { Tabs } from "./components/ui/Tabs";
+import { ToastContainer } from "./components/ui/Toast";
+import { pushToast } from "./lib/toast";
 import { cn } from "./lib/cn";
 
 const navItems = [
@@ -39,6 +42,7 @@ const navItems = [
   { id: "terminal", label: "Terminal" },
   { id: "tasks", label: "Tasks" },
   { id: "agents", label: "Agents" },
+  { id: "compare", label: "Compare" },
   { id: "quality", label: "Quality" },
   { id: "git", label: "Git" },
   { id: "documents", label: "Docs" },
@@ -56,8 +60,6 @@ export function App(): React.JSX.Element {
   const [overview, setOverview] = useState<ProjectOverview | null>(null);
   const [overviewError, setOverviewError] = useState<string | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
-  const [projectMessage, setProjectMessage] = useState<string | null>(null);
-  const [projectError, setProjectError] = useState<string | null>(null);
   const [isOpeningProject, setIsOpeningProject] = useState(false);
   const [terminalLaunch, setTerminalLaunch] = useState<TaskTerminalLaunch | null>(null);
   const [promptSendRequest, setPromptSendRequest] = useState<PromptSendRequest | null>(null);
@@ -207,8 +209,10 @@ export function App(): React.JSX.Element {
       return next.sort((left, right) => left.name.localeCompare(right.name));
     });
     setActiveProjectId(result.project.id);
-    setProjectMessage(result.duplicate ? "Project already exists; refreshed metadata." : "Project added.");
-    setProjectError(null);
+    pushToast(
+      result.duplicate ? "Project already exists; refreshed metadata." : "Project added.",
+      "success"
+    );
   };
 
   // Load persisted UI preferences (sidebar + last screen) once on mount.
@@ -269,6 +273,19 @@ export function App(): React.JSX.Element {
     });
   }, []);
 
+  // Re-check database health when the window regains focus.
+  useEffect(() => {
+    const refresh = (): void => {
+      void window.agentdesk.db.getHealth().then(setDbHealth).catch(() => undefined);
+    };
+
+    window.addEventListener("focus", refresh);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
   useEffect(() => {
     void window.agentdesk.projects
       .list()
@@ -277,7 +294,7 @@ export function App(): React.JSX.Element {
         setActiveProjectId(loadedProjects[0]?.id ?? null);
       })
       .catch((error: unknown) => {
-        setProjectError(error instanceof Error ? error.message : "Failed to load projects.");
+        pushToast(error instanceof Error ? error.message : "Failed to load projects.", "error");
       });
   }, []);
 
@@ -333,8 +350,6 @@ export function App(): React.JSX.Element {
 
   const openProjectFolder = async (): Promise<void> => {
     setIsOpeningProject(true);
-    setProjectMessage(null);
-    setProjectError(null);
 
     try {
       const result = await window.agentdesk.projects.openFolder();
@@ -343,7 +358,7 @@ export function App(): React.JSX.Element {
         applyOpenedProject(result);
       }
     } catch (error) {
-      setProjectError(error instanceof Error ? error.message : "Failed to open project folder.");
+      pushToast(error instanceof Error ? error.message : "Failed to open project folder.", "error");
     } finally {
       setIsOpeningProject(false);
     }
@@ -357,7 +372,7 @@ export function App(): React.JSX.Element {
       )}
     >
       {sidebarCollapsed ? null : (
-        <aside className="flex flex-col gap-7 border-r border-border bg-[#121820] p-4 xl:p-5">
+        <aside className="flex flex-col gap-7 border-r border-border bg-elevated p-4 xl:p-5">
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-lg border border-border bg-accent font-extrabold text-[#0e151a]">
               AD
@@ -373,7 +388,7 @@ export function App(): React.JSX.Element {
       )}
 
       <div className="grid min-w-0 grid-rows-[auto_1fr]">
-        <header className="flex items-center justify-between gap-4 border-b border-border bg-[#151b22] px-6 py-4">
+        <header className="flex items-center justify-between gap-4 border-b border-border bg-elevated px-6 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <Button
               aria-label={sidebarCollapsed ? "Show navigation" : "Hide navigation"}
@@ -455,18 +470,6 @@ export function App(): React.JSX.Element {
                     Open Folder
                   </Button>
                 </div>
-
-                {projectMessage ? (
-                  <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-[#bfe9e3]">
-                    {projectMessage}
-                  </div>
-                ) : null}
-
-                {projectError ? (
-                  <div className="rounded-md border border-danger/45 bg-danger/10 px-3 py-2 text-sm text-[#ffd0d0]">
-                    {projectError}
-                  </div>
-                ) : null}
 
                 {projects.length === 0 ? (
                   <EmptyState
@@ -563,6 +566,10 @@ export function App(): React.JSX.Element {
 
           {activeNav === "agents" ? <AgentProfilesPanel /> : null}
 
+          {activeNav === "compare" ? (
+            <AgentComparisonPanel onOpenRun={openRunDetail} project={activeProject} />
+          ) : null}
+
           {activeNav === "quality" ? (
             <QualityPanel
               actionRequest={qualityActionRequest}
@@ -593,6 +600,7 @@ export function App(): React.JSX.Element {
       </div>
 
       <CommandPalette actions={paletteActions} onClose={() => setPaletteOpen(false)} open={paletteOpen} />
+      <ToastContainer />
     </div>
   );
 }
@@ -670,7 +678,7 @@ function ProjectOverviewPanel({
             <div className="mt-3 grid gap-2">
               {scripts.map((script) => (
                 <div
-                  className="grid gap-1 rounded-md border border-border bg-[#10161d] px-3 py-2"
+                  className="grid gap-1 rounded-md border border-border bg-inset px-3 py-2"
                   key={script.name}
                 >
                   <span className="text-sm font-bold text-text">{script.name}</span>
@@ -689,7 +697,7 @@ function ProjectOverviewPanel({
             <div className="mt-3 grid gap-2">
               {recentRuns.map((run) => (
                 <button
-                  className="grid gap-1 rounded-md border border-border bg-[#10161d] px-3 py-2 text-left transition hover:border-accent/60 hover:bg-panel-strong"
+                  className="grid gap-1 rounded-md border border-border bg-inset px-3 py-2 text-left transition hover:border-accent/60 hover:bg-panel-strong"
                   key={run.id}
                   onClick={() => onOpenRun(run.id)}
                   type="button"

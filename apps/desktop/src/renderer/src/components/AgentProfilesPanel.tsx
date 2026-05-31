@@ -89,6 +89,19 @@ export function AgentProfilesPanel(): React.JSX.Element {
     void loadProfiles();
   }, [loadProfiles]);
 
+  // Re-probe agent availability when the window regains focus (tools may be installed mid-session).
+  useEffect(() => {
+    const refresh = (): void => {
+      void loadAvailability();
+    };
+
+    window.addEventListener("focus", refresh);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+    };
+  }, [loadAvailability]);
+
   const runCommandTest = async (profile: AgentProfileRecord): Promise<void> => {
     setTestingId(profile.id);
     setTestResult(null);
@@ -510,7 +523,7 @@ function SelectField({
     <label className="grid gap-1.5">
       <span className="text-xs font-bold text-muted">{label}</span>
       <select
-        className="rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+        className="rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -539,7 +552,7 @@ function TextArea({
     <label className="grid gap-1.5">
       <span className="text-xs font-bold text-muted">{label}</span>
       <textarea
-        className="min-h-24 w-full resize-y rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+        className="min-h-24 w-full resize-y rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         value={value}

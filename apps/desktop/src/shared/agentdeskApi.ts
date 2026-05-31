@@ -71,7 +71,6 @@ type Unsubscribe = () => void;
 export interface AgentDeskApi {
   app: {
     getName: () => string;
-    getPhase: () => string;
   };
   db: {
     getHealth: () => Promise<DatabaseHealth>;

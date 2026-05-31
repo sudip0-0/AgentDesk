@@ -148,7 +148,7 @@ export function TranscriptPanel({
       {error ? <p className="mb-3 text-sm text-[#ffd0d0]">{error}</p> : null}
       {exportMessage ? <p className="mb-3 text-sm text-muted">{exportMessage}</p> : null}
 
-      <pre className="max-h-[50vh] overflow-auto rounded-md border border-border bg-[#0d1117] p-3 font-mono text-xs leading-relaxed text-[#d9e2ef] whitespace-pre-wrap break-words">
+      <pre className="max-h-[50vh] overflow-auto rounded-md border border-border bg-code p-3 font-mono text-xs leading-relaxed text-[#d9e2ef] whitespace-pre-wrap break-words">
         {text || (loading ? "Loading transcript..." : "No transcript saved yet.")}
       </pre>
 

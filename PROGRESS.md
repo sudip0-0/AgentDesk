@@ -190,8 +190,33 @@ None.
   (`shared/diffHighlight.ts`) in the diff viewer; moved the running-agent count
   to a main-process source of truth (`terminal:sessions` broadcast); persisted
   the per-project last-selected run for fast resume.
+- Post-audit pass (P0/P1/P2): closed the gaps found in `docs/ui-ux-audit.md`.
+  - Wired the previously inert safety settings: `requireAgentLaunchApproval`
+    gates the agent-launch confirmation (TaskBoard) and `confirmDestructiveGit`
+    gates the commit/branch confirmations (GitPanel), both via the new
+    `hooks/useAppSettings.ts`.
+  - `Dialog` is now keyboard-accessible: Escape closes, Tab focus is trapped,
+    focus moves in on open and restores to the trigger on close.
+  - Command palette gained an autofocused filter input and a `Ctrl/Cmd+K`
+    binding (in addition to `Ctrl+Shift+P`).
+  - Agent prompt delivery to stdin uses output-based readiness detection
+    (debounced after output settles, with a fallback) instead of a fixed 500ms
+    timer (`terminalSessionManager`).
+  - `TerminalPanel` now renders the shared `StatusBadge`; window `minWidth`
+    lowered to 720 to match the responsive layout.
+  - Added a unified toast system (`lib/toast.ts` + `components/ui/Toast.tsx`);
+    project open/load feedback and previously-swallowed errors route through it.
+  - Roving `tabindex` + Arrow/Home/End keyboard navigation on the sidebar `Tabs`
+    and the terminal tablist.
+  - First-run onboarding on the Dashboard (welcome + 6-step core loop).
+  - New **Agent Comparison** screen (`AgentComparisonPanel`) groups a task's
+    runs by agent profile side by side (status, duration, exit code), reusing
+    the existing `runs:list` IPC.
+  - Theme tokens (`--color-elevated/inset/code`) added and the dominant repeated
+    background literals migrated to them; removed dead `app.getPhase()`;
+    DB health and agent availability now re-probe on window focus.
 - Verified all quality gates on Windows (Node 22): typecheck, lint (0 warnings),
-  151 tests passing (35 files), and production build.
+  152 tests passing (35 files), and production build.
 - Added `docs/audit.md` with the full codebase audit.
 
 ## Next Tasks

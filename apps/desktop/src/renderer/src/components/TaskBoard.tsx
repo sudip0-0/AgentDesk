@@ -13,6 +13,7 @@ import type { ProjectSummary } from "../../../shared/projectTypes";
 import type { TaskInput, TaskPriority, TaskRecord, TaskStatus } from "../../../shared/taskTypes";
 import { taskPriorities, taskStatuses } from "../../../shared/taskTypes";
 import type { TaskActionRequestType, UiActionRequest } from "../../../shared/uiActionTypes";
+import { useAppSettings } from "../hooks/useAppSettings";
 import { cn } from "../lib/cn";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
@@ -103,6 +104,27 @@ export function TaskBoard({
   } | null>(null);
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const settings = useAppSettings();
+
+  // Launch directly when approval is disabled; otherwise open the confirm dialog.
+  const beginLaunch = (
+    task: TaskRecord,
+    profile: AgentProfileRecord,
+    launchConfig: { displayCommand: string; promptDelivery: string }
+  ): void => {
+    if (!settings.requireAgentLaunchApproval) {
+      onLaunchInTerminal(task, profile);
+      return;
+    }
+
+    setPendingLaunch({
+      task,
+      profile,
+      displayCommand: launchConfig.displayCommand,
+      promptDelivery: launchConfig.promptDelivery
+    });
+    setLaunchConfirmOpen(true);
+  };
 
   const buildTaskPrompt = (task: TaskRecord, templateId: PromptTemplateId): string => {
     if (!project) {
@@ -227,13 +249,7 @@ export function TaskBoard({
       cwd: project.path
     });
 
-    setPendingLaunch({
-      task: selectedTask,
-      profile,
-      displayCommand: launchConfig.displayCommand,
-      promptDelivery: launchConfig.promptDelivery
-    });
-    setLaunchConfirmOpen(true);
+    beginLaunch(selectedTask, profile, launchConfig);
   };
 
   useEffect(() => {
@@ -412,7 +428,7 @@ export function TaskBoard({
 
             return (
               <section
-                className="grid min-h-[220px] w-72 shrink-0 content-start gap-2 rounded-lg border border-border bg-[#111820] p-3"
+                className="grid min-h-[220px] w-72 shrink-0 content-start gap-2 rounded-lg border border-border bg-elevated p-3"
                 key={status}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -489,13 +505,7 @@ export function TaskBoard({
             cwd: project.path
           });
 
-          setPendingLaunch({
-            task,
-            profile,
-            displayCommand: launchConfig.displayCommand,
-            promptDelivery: launchConfig.promptDelivery
-          });
-          setLaunchConfirmOpen(true);
+          beginLaunch(task, profile, launchConfig);
         }}
         onSendPromptToTerminal={requestSendPrompt}
         onStatusChange={(taskId, status) => void changeStatus(taskId, status)}
@@ -516,7 +526,7 @@ export function TaskBoard({
         open={launchConfirmOpen && pendingLaunch !== null}
         title={pendingLaunch ? `Launch ${pendingLaunch.profile.name}?` : "Launch agent"}
       >
-        <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+        <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs leading-relaxed text-muted">
           {pendingLaunch?.displayCommand}
         </pre>
         {pendingLaunch ? (
@@ -701,7 +711,7 @@ function TaskDetailPanel({
         <label className="mt-4 grid gap-1.5">
           <span className="text-xs font-bold text-muted">Status</span>
           <select
-            className="rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+            className="rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
             onChange={(event) => onStatusChange(task.id, event.target.value as TaskStatus)}
             value={task.status}
           >
@@ -746,7 +756,7 @@ function TaskDetailPanel({
         <label className="mt-4 grid gap-1.5">
           <span className="text-xs font-bold text-muted">Agent Profile</span>
           <select
-            className="rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+            className="rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
             onChange={(event) => setSelectedAgentProfileId(event.target.value)}
             value={selectedAgentProfile?.id ?? ""}
           >
@@ -757,7 +767,7 @@ function TaskDetailPanel({
             ))}
           </select>
         </label>
-        <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+        <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs leading-relaxed text-muted">
           {commandPreview?.displayCommand ?? "No agent profiles configured."}
         </pre>
         {commandPreview ? (
@@ -779,7 +789,7 @@ function TaskDetailPanel({
         <label className="mt-4 grid gap-1.5">
           <span className="text-xs font-bold text-muted">Prompt Template</span>
           <select
-            className="rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+            className="rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
             onChange={(event) => setSelectedTemplateId(event.target.value as PromptTemplateId)}
             value={selectedTemplateId}
           >
@@ -795,7 +805,7 @@ function TaskDetailPanel({
           <label className="mt-3 grid gap-1.5">
             <span className="text-xs font-bold text-muted">Fix Context</span>
             <textarea
-              className="min-h-28 w-full resize-y rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+              className="min-h-28 w-full resize-y rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
               onChange={(event) => onFixContextChange(event.target.value)}
               placeholder="Paste failed lint/typecheck/test output or review findings..."
               value={fixContext}
@@ -803,7 +813,7 @@ function TaskDetailPanel({
           </label>
         ) : null}
 
-        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs leading-relaxed text-muted">
           {promptPreview}
         </pre>
 
@@ -975,7 +985,7 @@ function SelectField({
     <label className="grid gap-1.5">
       <span className="text-xs font-bold text-muted">{label}</span>
       <select
-        className="rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+        className="rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -1002,7 +1012,7 @@ function TextArea({
     <label className="grid gap-1.5">
       <span className="text-xs font-bold text-muted">{label}</span>
       <textarea
-        className="min-h-24 w-full resize-y rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
+        className="min-h-24 w-full resize-y rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       />

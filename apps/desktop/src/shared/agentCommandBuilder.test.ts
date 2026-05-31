@@ -111,4 +111,24 @@ describe("agent command builder", () => {
     expect(launchConfig.spawnArgs.length).toBeGreaterThan(0);
     expect(launchConfig.displayCommand).toContain("powershell.exe");
   });
+
+  it("builds renderer previews without a process global", () => {
+    const originalProcess = globalThis.process;
+
+    Reflect.deleteProperty(globalThis, "process");
+
+    try {
+      const launchConfig = buildAgentLaunchConfig(profile, {
+        project,
+        task,
+        prompt: "Implement this task.",
+        cwd: project.path
+      });
+
+      expect(launchConfig.spawnExecutable).toBe("powershell.exe");
+      expect(launchConfig.displayCommand).toContain("powershell.exe");
+    } finally {
+      globalThis.process = originalProcess;
+    }
+  });
 });

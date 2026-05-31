@@ -30,16 +30,43 @@ export function DashboardPanel({
   actions: DashboardActions;
 }): React.JSX.Element {
   if (!project) {
+    const steps = [
+      "Open a local project folder",
+      "Break the work into tasks with clear acceptance criteria",
+      "Pick a task and an agent profile",
+      "Launch the agent in an embedded terminal",
+      "Run quality checks and review the git diff",
+      "Mark the task done or create a follow-up fix task"
+    ];
+
     return (
-      <EmptyState
-        action={
-          <Button onClick={actions.onOpenWorkspace} variant="primary">
-            Open Workspace
-          </Button>
-        }
-        description="Open a project folder to start orchestrating agents."
-        title="No workspace selected"
-      />
+      <section className="grid content-start gap-4">
+        <PageHeader
+          subtitle="A local-first command center for running coding agents through a task-driven workflow."
+          title="Welcome to AgentDesk"
+        />
+        <Card>
+          <CardTitle>Get started</CardTitle>
+          <CardDescription>
+            Open a project folder to begin. Here is the core loop AgentDesk is built around:
+          </CardDescription>
+          <ol className="mt-3 grid gap-2">
+            {steps.map((step, index) => (
+              <li className="flex items-start gap-3 text-sm text-muted" key={step}>
+                <span className="grid size-5 shrink-0 place-items-center rounded-full border border-accent/40 bg-accent/10 text-[11px] font-bold text-accent">
+                  {index + 1}
+                </span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-4">
+            <Button onClick={actions.onOpenWorkspace} variant="primary">
+              Open Workspace
+            </Button>
+          </div>
+        </Card>
+      </section>
     );
   }
 
@@ -123,7 +150,7 @@ export function DashboardPanel({
                 <div className="mt-3 grid gap-2">
                   {overview.recentRuns.map((run) => (
                     <button
-                      className="grid gap-1 rounded-md border border-border bg-[#10161d] px-3 py-2 text-left transition hover:border-accent/60 hover:bg-panel-strong"
+                      className="grid gap-1 rounded-md border border-border bg-inset px-3 py-2 text-left transition hover:border-accent/60 hover:bg-panel-strong"
                       key={run.id}
                       onClick={() => actions.onOpenRun(run.id)}
                       type="button"

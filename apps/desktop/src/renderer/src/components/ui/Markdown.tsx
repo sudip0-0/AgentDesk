@@ -115,7 +115,7 @@ export function Markdown({
         if (block.kind === "code") {
           return (
             <pre
-              className="mt-3 overflow-auto rounded-md border border-border bg-[#0d1117] p-3 font-mono text-xs leading-relaxed text-[#d9e2ef]"
+              className="mt-3 overflow-auto rounded-md border border-border bg-code p-3 font-mono text-xs leading-relaxed text-[#d9e2ef]"
               key={key}
             >
               {block.text}
@@ -145,7 +145,7 @@ export function Markdown({
                 </thead>
                 <tbody>
                   {block.rows.map((row, rowIndex) => (
-                    <tr className="odd:bg-[#10161d]" key={rowIndex}>
+                    <tr className="odd:bg-inset" key={rowIndex}>
                       {row.map((cell, cellIndex) => (
                         <td className="border-b border-border px-3 py-2 text-muted" key={cellIndex}>
                           {renderInline(cell)}

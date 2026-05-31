@@ -13,7 +13,7 @@ export function Input({ className, label, id, ...props }: InputProps): React.JSX
       {label ? <span className="text-xs font-bold text-muted">{label}</span> : null}
       <input
         className={cn(
-          "w-full rounded-md border border-border bg-[#10161d] px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60",
+          "w-full rounded-md border border-border bg-inset px-2.5 py-2 text-sm text-text outline-none focus:border-accent/60",
           className
         )}
         id={inputId}

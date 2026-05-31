@@ -48,6 +48,7 @@ export const UI_SCREEN_IDS = [
   "terminal",
   "tasks",
   "agents",
+  "compare",
   "quality",
   "git",
   "documents",

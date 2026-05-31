@@ -311,7 +311,7 @@ function ReviewSummaryCard({
           <ul className="mt-2 grid gap-1.5">
             {reviews.map((review) => (
               <li
-                className="flex items-center justify-between gap-2 rounded-md border border-border bg-[#10161d] px-2.5 py-1.5"
+                className="flex items-center justify-between gap-2 rounded-md border border-border bg-inset px-2.5 py-1.5"
                 key={review.id}
               >
                 <span className="text-xs text-muted">{review.createdAt}</span>
@@ -384,7 +384,7 @@ function RunDetail({
 
       <Card>
         <CardTitle>Prompt</CardTitle>
-        <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+        <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs leading-relaxed text-muted">
           {detail.prompt ?? "No prompt stored for this run."}
         </pre>
       </Card>
@@ -395,7 +395,7 @@ function RunDetail({
           {detail.logMeta.chunkCount} chunk(s), {detail.logMeta.characterCount} character(s)
           {detail.transcriptTruncated ? " · truncated for display" : ""}
         </CardDescription>
-        <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+        <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs leading-relaxed text-muted">
           {detail.transcript || "No terminal output captured."}
         </pre>
       </Card>
@@ -408,7 +408,7 @@ function RunDetail({
           ) : (
             <div className="mt-3 grid gap-2">
               {detail.changedFiles.map((file) => (
-                <div className="rounded-md border border-border bg-[#10161d] px-3 py-2" key={file.path}>
+                <div className="rounded-md border border-border bg-inset px-3 py-2" key={file.path}>
                   <span className="block truncate text-sm font-bold text-text">{file.path}</span>
                   <span className="text-xs text-muted">{file.status}</span>
                 </div>
@@ -424,7 +424,7 @@ function RunDetail({
           ) : (
             <div className="mt-3 grid gap-2">
               {detail.qualityResults.map((check) => (
-                <div className="rounded-md border border-border bg-[#10161d] px-3 py-2" key={check.id}>
+                <div className="rounded-md border border-border bg-inset px-3 py-2" key={check.id}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-bold text-text">{check.label}</span>
                     <StatusBadge status={check.status} />

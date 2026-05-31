@@ -49,6 +49,9 @@ Agent status detection will be inconsistent.
 
 Mitigation:
 Use agent adapter profiles. Keep status detection best-effort. Allow manual status override.
+Prompt delivery to stdin now waits for the agent's startup output to settle
+(readiness detection with a fallback) instead of a fixed delay, so slow-starting
+CLIs are less likely to receive the prompt before they are ready.
 
 ---
 

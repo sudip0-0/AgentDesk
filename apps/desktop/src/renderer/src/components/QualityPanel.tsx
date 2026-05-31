@@ -387,7 +387,7 @@ export function QualityPanel({
             const risk = classifyCommand(command.command);
 
             return (
-              <li className="rounded-md border border-border bg-[#0d1117] px-3 py-2" key={command.id}>
+              <li className="rounded-md border border-border bg-code px-3 py-2" key={command.id}>
                 <span className="font-bold text-text">{command.label}</span>
                 <span className="mt-1 block break-all">{command.command}</span>
                 <span className="mt-1 block text-xs">
@@ -481,7 +481,7 @@ function QualityResultDetail({
         <span>Task: {check.taskId ?? "none"} · Run: {check.agentRunId ?? "none"}</span>
       </div>
 
-      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-[#0d1117] p-3 text-xs leading-relaxed text-muted">
+      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-code p-3 text-xs leading-relaxed text-muted">
         {check.output || "No output captured."}
       </pre>
 

@@ -223,18 +223,39 @@ export class TerminalSessionManager {
     this.ensureIdleWatchdog();
     this.sendSessionCount(webContents);
 
-    if (command?.promptWillBeSentToStdin && prompt) {
-      setTimeout(() => {
-        void (async () => {
-          if (!this.sessions.has(id)) {
-            return;
-          }
+    // Deliver the prompt to stdin once the agent looks ready instead of using a
+    // fixed delay. Readiness = output has started and then paused (debounced), so
+    // slow-starting CLIs are not raced. A fallback covers agents that emit nothing.
+    let promptDelivered = false;
+    let readinessTimer: NodeJS.Timeout | null = null;
+    const wantsStdinPrompt = Boolean(command?.promptWillBeSentToStdin && prompt);
 
-          await writePromptToTerminal(prompt, (data) => {
-            pty.write(data);
-          });
-        })();
-      }, 500);
+    const deliverPendingPrompt = (): void => {
+      if (promptDelivered || !wantsStdinPrompt || !prompt) {
+        return;
+      }
+
+      promptDelivered = true;
+
+      if (readinessTimer) {
+        clearTimeout(readinessTimer);
+        readinessTimer = null;
+      }
+
+      void (async () => {
+        if (!this.sessions.has(id)) {
+          return;
+        }
+
+        await writePromptToTerminal(prompt, (data) => {
+          pty.write(data);
+        });
+      })();
+    };
+
+    if (wantsStdinPrompt) {
+      readinessTimer = setTimeout(deliverPendingPrompt, 4_000);
+      readinessTimer.unref?.();
     }
 
     pty.onData((data) => {
@@ -247,6 +268,16 @@ export class TerminalSessionManager {
         session.outputTail = appendOutputTail(session.outputTail, redacted);
         session.lastOutputAt = Date.now();
         this.updateActivityState(session, webContents);
+      }
+
+      // Output started: deliver the prompt once it settles for a short window.
+      if (wantsStdinPrompt && !promptDelivered) {
+        if (readinessTimer) {
+          clearTimeout(readinessTimer);
+        }
+
+        readinessTimer = setTimeout(deliverPendingPrompt, 250);
+        readinessTimer.unref?.();
       }
 
       if (!webContents.isDestroyed()) {
